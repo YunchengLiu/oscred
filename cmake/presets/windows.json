@@ -1,0 +1,149 @@
+{
+    "version": 4,
+    "include": [
+        "base.json"
+    ],
+    "configurePresets": [
+        {
+            "name": "win-clangcl",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang-cl.exe"
+            }
+        },
+        {
+            "name": "win-clangcl-dbg",
+            "inherits": "win-clangcl",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "win-clangcl-rel",
+            "inherits": "win-clangcl",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "win-clangcl-reldbg",
+            "inherits": "win-clangcl",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "win-clangcl-minrel",
+            "inherits": "win-clangcl",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        },
+        {
+            "name": "win-msvc",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "cl.exe"
+            }
+        },
+        {
+            "name": "win-msvc-dbg",
+            "inherits": "win-msvc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "win-msvc-rel",
+            "inherits": "win-msvc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "win-msvc-reldbg",
+            "inherits": "win-msvc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "win-msvc-minrel",
+            "inherits": "win-msvc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "win",
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "win-clangcl-dbg",
+            "configurePreset": "win-clangcl-dbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-clangcl-rel",
+            "configurePreset": "win-clangcl-rel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-clangcl-reldbg",
+            "configurePreset": "win-clangcl-reldbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-clangcl-minrel",
+            "configurePreset": "win-clangcl-minrel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-dbg",
+            "configurePreset": "win-msvc-dbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-rel",
+            "configurePreset": "win-msvc-rel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-reldbg",
+            "configurePreset": "win-msvc-reldbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-minrel",
+            "configurePreset": "win-msvc-minrel",
+            "inherits": "win"
+        }
+    ]
+}

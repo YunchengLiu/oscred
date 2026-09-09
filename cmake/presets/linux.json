@@ -1,0 +1,80 @@
+{
+    "version": 4,
+    "include": [
+        "base.json"
+    ],
+    "configurePresets": [
+        {
+            "name": "linux-gcc",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "linux-gcc-dbg",
+            "inherits": "linux-gcc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux-gcc-rel",
+            "inherits": "linux-gcc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux-gcc-reldbg",
+            "inherits": "linux-gcc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "linux-gcc-minrel",
+            "inherits": "linux-gcc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "MinSizeRel"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "linux",
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "linux-gcc-dbg",
+            "configurePreset": "linux-gcc-dbg",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-rel",
+            "configurePreset": "linux-gcc-rel",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-reldbg",
+            "configurePreset": "linux-gcc-reldbg",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-minrel",
+            "configurePreset": "linux-gcc-minrel",
+            "inherits": "linux"
+        }
+    ]
+}

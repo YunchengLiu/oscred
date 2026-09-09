@@ -1,0 +1,62 @@
+---
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: Latest
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ConstructorInitializerIndentWidth: 4
+AccessModifierOffset: -4
+UseTab: Never
+TabWidth: 4
+ColumnLimit: 120
+AlignAfterOpenBracket: BlockIndent
+AlignArrayOfStructures: Left
+AlignConsecutiveAssignments:
+    Enabled: true
+    PadOperators: true
+AlignConsecutiveDeclarations:
+    Enabled: true
+    PadOperators: true
+AlignConsecutiveMacros:
+    Enabled: true
+    AcrossEmptyLines: true
+AlignOperands: DontAlign
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: All
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+BreakBeforeBraces: Attach
+BreakConstructorInitializers: AfterColon
+BreakTemplateDeclarations: Yes
+BreakBeforeConceptDeclarations: Always
+PackConstructorInitializers: NextLineOnly
+IndentCaseLabels: true
+IndentRequiresClause: true
+NamespaceIndentation: All
+InsertBraces: true
+InsertNewlineAtEOF: true
+LineEnding: LF
+MaxEmptyLinesToKeep: 2
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Pointer
+QualifierAlignment: Right
+RequiresClausePosition: OwnLine
+SpaceAfterTemplateKeyword: false
+SpacesBeforeTrailingComments: 1
+IncludeBlocks: Merge
+IncludeCategories:
+    - Regex: '^<([[:alnum:]_]+)>$'
+      Priority: 1
+    - Regex: '^<.*[\\/].*>$'
+      Priority: 2
+    - Regex: '^<[^\\/]+\.[[:alpha:]]+>$'
+      Priority: 3
+    - Regex: '^".*[\\/].*"$'
+      Priority: 4
+    - Regex: '^".*"$'
+      Priority: 5
+SortIncludes: CaseSensitive
+SortUsingDeclarations: LexicographicNumeric
+...
