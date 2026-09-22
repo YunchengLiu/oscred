@@ -1,0 +1,61 @@
+#include <format>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+#include <osvault/windows/hex_codec.h>
+
+using std::string_view_literals::operator""sv;
+
+TEST_CASE("hex encodes name bytes", "[windows][hex]") {
+    auto const [input, expected] = GENERATE(
+        (std::pair{""sv, ""sv}), (std::pair{"A"sv, "41"sv}), (std::pair{"a"sv, "61"sv}),
+        (std::pair{"foobar"sv, "666F6F626172"sv}), (std::pair{"密钥/*"sv, "E5AF86E992A52F2A"sv}),
+        (std::pair{"\0\x7F\x80\xFF"sv, "007F80FF"sv})
+    );
+    CHECK(osvault::windows::encode_hex(input) == expected);
+}
+
+TEST_CASE("hex encodes every byte", "[windows][hex]") {
+    std::string input;
+    std::string expected;
+    for (int value = 0; value < 256; ++value) {
+        input.push_back(static_cast<char>(value));
+        expected += std::format("{:02X}", value);
+    }
+    CHECK(osvault::windows::encode_hex(input) == expected);
+}
+
+TEST_CASE("hex decodes name bytes", "[windows][hex]") {
+    auto const [input, expected] = GENERATE(
+        (std::pair{""sv, ""sv}), (std::pair{"41"sv, "A"sv}), (std::pair{"61"sv, "a"sv}),
+        (std::pair{"666f6F626172"sv, "foobar"sv}), (std::pair{"E5AF86E992A52F2A"sv, "密钥/*"sv}),
+        (std::pair{"007F80FF"sv, "\0\x7F\x80\xFF"sv})
+    );
+    auto const decoded = osvault::windows::decode_hex(input);
+    REQUIRE(decoded);
+    CHECK(*decoded == expected);
+}
+
+TEST_CASE("hex decodes every byte", "[windows][hex]") {
+    bool const  uppercase = GENERATE(false, true);
+    std::string encoded;
+    std::string expected;
+    for (int value = 0; value < 256; ++value) {
+        encoded += uppercase ? std::format("{:02X}", value) : std::format("{:02x}", value);
+        expected.push_back(static_cast<char>(value));
+    }
+    auto const decoded = osvault::windows::decode_hex(encoded);
+    REQUIRE(decoded);
+    CHECK(*decoded == expected);
+}
+
+TEST_CASE("hex rejects malformed input", "[windows][hex]") {
+    auto const input = GENERATE(
+        "0"sv, "G0"sv, "0G"sv, "00GG"sv, "0x41"sv, "41 42 "sv, "0\0"sv, "+1"sv, "-1"sv, " 1"sv, "1 "sv,
+        "\xFF"
+        "0"sv
+    );
+    CHECK_FALSE(osvault::windows::decode_hex(input));
+}

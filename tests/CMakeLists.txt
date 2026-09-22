@@ -15,9 +15,16 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(osvault-tests)
 
-file(GLOB osvault_test_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
-target_sources(osvault-tests PRIVATE ${osvault_test_sources})
-unset(osvault_test_sources)
+file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+
+if(WIN32)
+    file(GLOB win_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/windows/*.cpp")
+    list(APPEND sources ${win_sources})
+    unset(win_sources)
+endif()
+
+target_sources(osvault-tests PRIVATE ${sources})
+unset(sources)
 
 target_link_libraries(osvault-tests PRIVATE osvault::osvault Catch2::Catch2WithMain)
 osvault_setup_target(osvault-tests)

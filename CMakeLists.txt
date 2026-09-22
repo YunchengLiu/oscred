@@ -21,15 +21,24 @@ endfunction()
 add_library(osvault)
 add_library(osvault::osvault ALIAS osvault)
 
-file(GLOB osvault_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/osvault/*.cpp")
+file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/osvault/*.cpp")
+
+if(WIN32)
+    file(GLOB win_sources CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/osvault/windows/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/osvault/windows/*.h"
+    )
+    list(APPEND sources ${win_sources})
+    unset(win_sources)
+endif()
 
 target_sources(
     osvault
-    PRIVATE ${osvault_sources}
+    PRIVATE ${sources}
     PUBLIC FILE_SET HEADERS BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}" FILES osvault/osvault.h
 )
 
-unset(osvault_sources)
+unset(sources)
 
 target_compile_features(osvault PUBLIC cxx_std_23)
 osvault_setup_target(osvault)
