@@ -18,7 +18,9 @@
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_CXX_COMPILER": "clang-cl.exe"
+                "CMAKE_CXX_COMPILER": "clang-cl.exe",
+                "CMAKE_RC_COMPILER": "llvm-rc",
+                "CMAKE_MT": "llvm-mt"
             }
         },
         {

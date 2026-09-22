@@ -9,6 +9,15 @@ project(
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
+function(osvault_setup_target target)
+    set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        target_compile_options(${target} PRIVATE /utf-8 /W4)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$")
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endfunction()
+
 add_library(osvault)
 add_library(osvault::osvault ALIAS osvault)
 
@@ -23,13 +32,9 @@ target_sources(
 unset(osvault_sources)
 
 target_compile_features(osvault PUBLIC cxx_std_23)
-set_target_properties(osvault PROPERTIES CXX_EXTENSIONS OFF)
+osvault_setup_target(osvault)
 
-if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    target_compile_options(osvault PRIVATE /utf-8 /W4)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$")
-    target_compile_options(osvault PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+# install and package configuration
 
 configure_package_config_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/osvault-config.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/osvault-config.cmake"
@@ -59,4 +64,14 @@ install(
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/osvault-config.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/osvault-config-version.cmake"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/osvault"
+)
+
+# copy compile_commands.json to build directory for IDEs
+add_custom_target(copy-compile-database ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_BINARY_DIR}/compile_commands.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/build/compile_commands.json"
+    DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json
+    COMMENT "copying compile_commands.json to the build directory"
+    VERBATIM
 )
