@@ -34,6 +34,12 @@ unset(osvault_sources)
 target_compile_features(osvault PUBLIC cxx_std_23)
 osvault_setup_target(osvault)
 
+include(CTest)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
+
 # install and package configuration
 
 configure_package_config_file(
