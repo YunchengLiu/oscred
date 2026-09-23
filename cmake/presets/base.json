@@ -7,6 +7,9 @@
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}/cache",
             "cacheVariables": {
+                "CMAKE_CXX_STANDARD": "23",
+                "CMAKE_CXX_STANDARD_REQUIRED": true,
+                "CMAKE_CXX_EXTENSIONS": false,
                 "CMAKE_EXPORT_COMPILE_COMMANDS": true,
                 "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/bin",
                 "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib",

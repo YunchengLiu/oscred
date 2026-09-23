@@ -10,7 +10,11 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 function(osvault_setup_target target)
-    set_target_properties(${target} PROPERTIES CXX_EXTENSIONS OFF)
+    # Use the Windows 10 API baseline for supported Windows 10/11 desktop builds
+    target_compile_definitions(
+        ${target} PRIVATE "$<$<PLATFORM_ID:Windows>:WIN32_LEAN_AND_MEAN;NOMINMAX>"
+                          "$<$<PLATFORM_ID:Windows>:WINVER=0x0A00;_WIN32_WINNT=0x0A00;NTDDI_VERSION=0x0A000000>"
+    )
     if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
         target_compile_options(${target} PRIVATE /utf-8 /W4)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$")
@@ -24,9 +28,8 @@ add_library(osvault::osvault ALIAS osvault)
 file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/osvault/*.cpp")
 
 if(WIN32)
-    file(GLOB win_sources CONFIGURE_DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/osvault/windows/*.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/osvault/windows/*.h"
+    file(GLOB win_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/osvault/windows/*.cpp"
+         "${CMAKE_CURRENT_SOURCE_DIR}/osvault/windows/*.h"
     )
     list(APPEND sources ${win_sources})
     unset(win_sources)
@@ -81,12 +84,17 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/osvault-config.cmake"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/osvault"
 )
 
-# copy compile_commands.json to build directory for IDEs
-add_custom_target(copy-compile-database ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_BINARY_DIR}/compile_commands.json"
-    "${CMAKE_CURRENT_SOURCE_DIR}/build/compile_commands.json"
-    DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json
-    COMMENT "copying compile_commands.json to the build directory"
-    VERBATIM
+# Keep the IDE copy local to development builds that generate a compile database
+if(PROJECT_IS_TOP_LEVEL
+   AND CMAKE_EXPORT_COMPILE_COMMANDS
+   AND CMAKE_GENERATOR MATCHES "Ninja|Make"
 )
+    add_custom_target(
+        copy-compile-database ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/compile_commands.json"
+                "${CMAKE_CURRENT_SOURCE_DIR}/build/compile_commands.json"
+        DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json
+        COMMENT "copying compile_commands.json to the build directory"
+        VERBATIM
+    )
+endif()

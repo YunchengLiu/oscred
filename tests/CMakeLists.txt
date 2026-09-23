@@ -1,17 +1,16 @@
 include(FetchContent)
 
-# Match Catch2's feature detection to the C++23 test consumers
-set(CMAKE_CXX_STANDARD 23)
-
 FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
     GIT_TAG v3.16.0
     GIT_SHALLOW TRUE
-    SYSTEM
-    EXCLUDE_FROM_ALL
+    SYSTEM EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(Catch2)
+
+# Keep Catch2's feature detection consistent with the C++23 test consumers
+target_compile_features(Catch2 PRIVATE cxx_std_23)
 
 add_executable(osvault-tests)
 
