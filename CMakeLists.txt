@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.28)
 
+# Select test dependencies before the vcpkg toolchain processes the manifest
+option(BUILD_TESTING "Build the testing tree." ON)
+if(BUILD_TESTING)
+    list(APPEND VCPKG_MANIFEST_FEATURES tests)
+endif()
+
 project(
     osvault
     VERSION 0.1.0
