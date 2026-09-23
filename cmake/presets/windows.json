@@ -147,5 +147,57 @@
             "configurePreset": "win-msvc-minrel",
             "inherits": "win"
         }
+    ],
+    "testPresets": [
+        {
+            "name": "win",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "win-clangcl-dbg",
+            "configurePreset": "win-clangcl-dbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-clangcl-rel",
+            "configurePreset": "win-clangcl-rel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-clangcl-reldbg",
+            "configurePreset": "win-clangcl-reldbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-clangcl-minrel",
+            "configurePreset": "win-clangcl-minrel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-dbg",
+            "configurePreset": "win-msvc-dbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-rel",
+            "configurePreset": "win-msvc-rel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-reldbg",
+            "configurePreset": "win-msvc-reldbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-minrel",
+            "configurePreset": "win-msvc-minrel",
+            "inherits": "win"
+        }
     ]
 }

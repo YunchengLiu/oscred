@@ -76,5 +76,37 @@
             "configurePreset": "linux-gcc-minrel",
             "inherits": "linux"
         }
+    ],
+    "testPresets": [
+        {
+            "name": "linux",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "linux-gcc-dbg",
+            "configurePreset": "linux-gcc-dbg",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-rel",
+            "configurePreset": "linux-gcc-rel",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-reldbg",
+            "configurePreset": "linux-gcc-reldbg",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-minrel",
+            "configurePreset": "linux-gcc-minrel",
+            "inherits": "linux"
+        }
     ]
 }

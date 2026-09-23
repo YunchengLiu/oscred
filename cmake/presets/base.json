@@ -20,5 +20,14 @@
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/${presetName}/install"
             }
         }
+    ],
+    "testPresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "output": {
+                "outputOnFailure": true
+            }
+        }
     ]
 }

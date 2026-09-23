@@ -76,5 +76,37 @@
             "configurePreset": "mac-clang-minrel",
             "inherits": "mac"
         }
+    ],
+    "testPresets": [
+        {
+            "name": "mac",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "mac-clang-dbg",
+            "configurePreset": "mac-clang-dbg",
+            "inherits": "mac"
+        },
+        {
+            "name": "mac-clang-rel",
+            "configurePreset": "mac-clang-rel",
+            "inherits": "mac"
+        },
+        {
+            "name": "mac-clang-reldbg",
+            "configurePreset": "mac-clang-reldbg",
+            "inherits": "mac"
+        },
+        {
+            "name": "mac-clang-minrel",
+            "configurePreset": "mac-clang-minrel",
+            "inherits": "mac"
+        }
     ]
 }
