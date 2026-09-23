@@ -44,6 +44,7 @@ target_sources(
 unset(sources)
 
 target_compile_features(osvault PUBLIC cxx_std_23)
+target_link_libraries(osvault PRIVATE "$<$<PLATFORM_ID:Windows>:Advapi32>")
 osvault_setup_target(osvault)
 
 include(CTest)

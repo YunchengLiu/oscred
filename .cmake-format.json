@@ -1,4 +1,15 @@
 {
+    "parse": {
+        "additional_commands": {
+            "catch_discover_tests": {
+                "pargs": 1,
+                "kwargs": {
+                    "TEST_SPEC": "*",
+                    "PROPERTIES": "*"
+                }
+            }
+        }
+    },
     "format": {
         "tab_size": 4,
         "line_width": 120,

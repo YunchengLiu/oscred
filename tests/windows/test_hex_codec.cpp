@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <format>
 #include <string>
 #include <string_view>
@@ -8,7 +9,7 @@
 
 using std::string_view_literals::operator""sv;
 
-TEST_CASE("hex encodes name bytes", "[windows][hex]") {
+TEST_CASE("hex encoding", "[windows][hex]") {
     auto const [input, expected] = GENERATE(
         (std::pair{""sv, ""sv}), (std::pair{"A"sv, "41"sv}), (std::pair{"a"sv, "61"sv}),
         (std::pair{"foobar"sv, "666F6F626172"sv}), (std::pair{"密钥/*"sv, "E5AF86E992A52F2A"sv}),
@@ -17,17 +18,20 @@ TEST_CASE("hex encodes name bytes", "[windows][hex]") {
     CHECK(osvault::windows::encode_hex(input) == expected);
 }
 
-TEST_CASE("hex encodes every byte", "[windows][hex]") {
+TEST_CASE("hex byte encoding", "[windows][hex]") {
     std::string input;
     std::string expected;
+    // An independent oracle catches mistakes in the production formatter's width and signedness
+    constexpr auto digits = "0123456789ABCDEF"sv;
     for (int value = 0; value < 256; ++value) {
         input.push_back(static_cast<char>(value));
-        expected += std::format("{:02X}", value);
+        expected.push_back(digits[static_cast<std::size_t>(value) / 16]);
+        expected.push_back(digits[static_cast<std::size_t>(value) % 16]);
     }
     CHECK(osvault::windows::encode_hex(input) == expected);
 }
 
-TEST_CASE("hex decodes name bytes", "[windows][hex]") {
+TEST_CASE("hex decoding", "[windows][hex]") {
     auto const [input, expected] = GENERATE(
         (std::pair{""sv, ""sv}), (std::pair{"41"sv, "A"sv}), (std::pair{"61"sv, "a"sv}),
         (std::pair{"666f6F626172"sv, "foobar"sv}), (std::pair{"E5AF86E992A52F2A"sv, "密钥/*"sv}),
@@ -38,8 +42,8 @@ TEST_CASE("hex decodes name bytes", "[windows][hex]") {
     CHECK(*decoded == expected);
 }
 
-TEST_CASE("hex decodes every byte", "[windows][hex]") {
-    bool const  uppercase = GENERATE(false, true);
+TEST_CASE("hex byte decoding", "[windows][hex]") {
+    auto const  uppercase = GENERATE(false, true);
     std::string encoded;
     std::string expected;
     for (int value = 0; value < 256; ++value) {
@@ -51,7 +55,7 @@ TEST_CASE("hex decodes every byte", "[windows][hex]") {
     CHECK(*decoded == expected);
 }
 
-TEST_CASE("hex rejects malformed input", "[windows][hex]") {
+TEST_CASE("hex invalid input", "[windows][hex]") {
     auto const input = GENERATE(
         "0"sv, "G0"sv, "0G"sv, "00GG"sv, "0x41"sv, "41 42 "sv, "0\0"sv, "+1"sv, "-1"sv, " 1"sv, "1 "sv,
         "\xFF"

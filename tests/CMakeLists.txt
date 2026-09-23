@@ -14,19 +14,17 @@ target_compile_features(Catch2 PRIVATE cxx_std_23)
 
 add_executable(osvault-tests)
 
-file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
-
-if(WIN32)
-    file(GLOB win_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/windows/*.cpp")
-    list(APPEND sources ${win_sources})
-    unset(win_sources)
-endif()
+file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp")
 
 target_sources(osvault-tests PRIVATE ${sources})
 unset(sources)
 
-target_link_libraries(osvault-tests PRIVATE osvault::osvault Catch2::Catch2WithMain)
+target_link_libraries(osvault-tests PRIVATE osvault::osvault Catch2::Catch2)
 osvault_setup_target(osvault-tests)
 
 include("${catch2_SOURCE_DIR}/extras/Catch.cmake")
-catch_discover_tests(osvault-tests)
+catch_discover_tests(osvault-tests TEST_SPEC "~[native]")
+
+if(WIN32)
+    include(windows/backend-win.cmake)
+endif()

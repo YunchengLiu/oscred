@@ -19,7 +19,7 @@ namespace osvault::windows {
         }
         encoded.reserve(input.size() * 2);
         // Preserve high-bit bytes even when char is signed
-        for (auto ch : input) {
+        for (auto const ch : input) {
             std::format_to(std::back_inserter(encoded), "{:02X}", static_cast<unsigned char>(ch));
         }
         return encoded;

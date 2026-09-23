@@ -11,10 +11,22 @@ namespace osvault {
 
     /// @brief A vault is an access handle for interacting with the OS's native protected storage
     ///
-    /// @details The vault uses a key-value-based representation to store data.
-    /// The key is a case-sensitive string, and the value is a byte array.
-    /// The vault is identified by a name, which is used to group related key-value entries together.
-    /// @note Destroying the vault object does not remove the stored entries.
+    /// @details The vault uses a key-value-based representation to store data
+    /// The key is a case-sensitive string, and the value is a byte array
+    /// The vault is identified by a name, which is used to group related key-value entries together
+    ///
+    /// Names and keys are nonempty UTF-8 byte strings without null bytes
+    /// Both are compared byte-for-byte; encoding is not validated or normalized
+    /// Values may be empty
+    ///
+    /// Entries are stored in the current user's native storage context
+    /// Destroying the vault object does not remove the stored entries
+    /// Entries also remain available after the writing process exits
+    ///
+    /// Moved-from objects have an empty name and reject storage operations with std::errc::invalid_argument
+    /// The try_ operations report operation errors but may still throw on allocation failure
+    /// @pre Callers must serialize storage operations within the same user storage context across objects,
+    /// threads, and processes; unsynchronized concurrent access has undefined behavior
     class vault {
         std::string name_;
 
@@ -28,7 +40,7 @@ namespace osvault {
         /// @param name The name of the vault
         /// @exception std::invalid_argument The name is empty or contains a null byte
         explicit vault(std::string name);
-        ~vault() = default;
+        ~vault() noexcept = default;
 
         vault(vault const&)            = delete;
         vault& operator=(vault const&) = delete;
@@ -40,6 +52,8 @@ namespace osvault {
         }
 
         /// @brief Get the maximum key length in bytes on the current native platform
+        ///
+        /// @return Zero if the bound name leaves no room for a key or the object was moved from
         [[nodiscard]] std::size_t max_key_size() const noexcept;
 
         /// @brief Get the maximum value size in bytes on the current native platform
@@ -47,7 +61,7 @@ namespace osvault {
 
         /// @brief Read the value for a key
         ///
-        /// @exception std::system_error The operation fails
+        /// @exception std::system_error The key is absent or the operation fails
         [[nodiscard]] std::vector<std::byte> read(std::string_view key) const;
 
         /// @brief Store a value for a key, replacing any existing value
@@ -68,6 +82,8 @@ namespace osvault {
 
         /// @brief Remove all entries from this vault
         ///
+        /// @details A failure may leave some entries already removed
+        /// Cleanup can be retried with this object or another vault with the same name in the same storage context
         /// @exception std::system_error The operation fails
         void clear();
 
@@ -85,6 +101,9 @@ namespace osvault {
         [[nodiscard]] std::expected<std::vector<std::string>, std::error_code> try_get_keys() const;
 
         /// @copybrief clear
+        /// @details A failure may leave some entries already removed
+        /// Cleanup can be retried with this object or another vault with the same name in the same storage context
         [[nodiscard]] std::error_code try_clear();
     };
+
 } // namespace osvault
