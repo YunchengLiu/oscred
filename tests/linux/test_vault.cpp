@@ -59,7 +59,8 @@ namespace {
         }
     }
 
-    [[nodiscard]] std::pair<object_ptr<SecretService>, object_ptr<SecretCollection>> collection() {
+    [[nodiscard]] std::pair<object_ptr<SecretService>, object_ptr<SecretCollection>>
+    collection(char const* const alias = SECRET_COLLECTION_DEFAULT) {
         require_isolation();
         error_ptr                 error{nullptr, g_error_free};
         object_ptr<SecretService> service{
@@ -71,7 +72,7 @@ namespace {
         }
         object_ptr<SecretCollection> result{
             secret_collection_for_alias_sync(
-                service.get(), SECRET_COLLECTION_DEFAULT, SECRET_COLLECTION_NONE, nullptr, std::out_ptr(error)
+                service.get(), alias, SECRET_COLLECTION_NONE, nullptr, std::out_ptr(error)
             ),
             g_object_unref
         };
@@ -105,8 +106,8 @@ namespace {
         return field(fields.get(), "group").starts_with(prefix);
     }
 
-    void check_empty(std::string_view const prefix) {
-        auto const [service, store] = collection();
+    void check_empty(std::string_view const prefix, char const* const alias = SECRET_COLLECTION_DEFAULT) {
+        auto const [service, store] = collection(alias);
         auto const entries          = enumerate(store.get());
         for (auto const* entry = entries.get(); entry; entry = entry->next) {
             if (in_scope(SECRET_ITEM(entry->data), prefix)) {
@@ -115,9 +116,9 @@ namespace {
         }
     }
 
-    [[nodiscard]] bool remove_and_verify(std::string_view const prefix) noexcept {
+    [[nodiscard]] bool remove_and_verify(std::string_view const prefix, char const* const alias) noexcept {
         try {
-            auto const [service, store] = collection();
+            auto const [service, store] = collection(alias);
             auto const entries          = enumerate(store.get());
             bool       success          = true;
             for (auto const* entry = entries.get(); entry; entry = entry->next) {
@@ -150,7 +151,7 @@ namespace {
                     success = false;
                 }
             }
-            check_empty(prefix);
+            check_empty(prefix, alias);
             return success;
         } catch (std::exception const& error) {
             std::fprintf(stderr, "Native cleanup failed: %s\n", error.what());
@@ -159,12 +160,15 @@ namespace {
     }
 
     class vault_fixture {
+        char const* const alias_;
+
     public:
-        vault_fixture() {
-            check_empty(fixture_group);
+        explicit vault_fixture(char const* const alias = SECRET_COLLECTION_DEFAULT) :
+            alias_{alias} {
+            check_empty(fixture_group, alias_);
         }
         ~vault_fixture() noexcept {
-            if (!remove_and_verify(fixture_group)) {
+            if (!remove_and_verify(fixture_group, alias_)) {
                 cleanup_failed = true;
             }
         }
@@ -182,9 +186,11 @@ namespace {
         );
     }
 
-    void
-    check_record(osvault::vault const& storage, std::string_view const key, std::span<std::byte const> const value) {
-        auto const [service, store] = collection();
+    void check_record(
+        osvault::vault const& storage, std::string_view const key, std::span<std::byte const> const value,
+        char const* const alias = SECRET_COLLECTION_DEFAULT
+    ) {
+        auto const [service, store] = collection(alias);
         auto const entries          = enumerate(store.get());
         unsigned   matches          = 0;
         for (auto const* entry = entries.get(); entry; entry = entry->next) {
@@ -441,6 +447,71 @@ TEST_CASE_METHOD(vault_fixture, "vault clear isolation", "[native][vault]") {
     check_absent(storage, "first");
     CHECK(neighbor.read("first").empty());
     check_record(neighbor, "first", {});
+}
+
+TEST_CASE_METHOD(vault_fixture, "vault collection isolation", "[native][linux][vault]") {
+    // The private provider's session collection needs no provisioning or interactive unlock
+    vault_fixture const neighbor{SECRET_COLLECTION_SESSION};
+    auto const [service, store]             = collection();
+    auto const [other_service, other_store] = collection(SECRET_COLLECTION_SESSION);
+    REQUIRE(
+        std::string_view{g_dbus_proxy_get_object_path(G_DBUS_PROXY(store.get()))} !=
+        g_dbus_proxy_get_object_path(G_DBUS_PROXY(other_store.get()))
+    );
+
+    osvault::vault    storage{group()};
+    std::vector const other_value{std::byte{0x22}, std::byte{0}, std::byte{0xFF}};
+    for (auto const* const key : {"shared", "other-only"}) {
+        attributes_ptr const fields{g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free), g_hash_table_unref};
+        g_hash_table_insert(fields.get(), g_strdup("xdg:schema"), g_strdup("osvlt"));
+        g_hash_table_insert(fields.get(), g_strdup("group"), g_strdup(storage.name().data()));
+        g_hash_table_insert(fields.get(), g_strdup("key"), g_strdup(key));
+        error_ptr                                                         error{nullptr, g_error_free};
+        std::unique_ptr<SecretValue, decltype(&secret_value_unref)> const value{
+            secret_value_new(
+                reinterpret_cast<char const*>(other_value.data()), other_value.size(), "application/octet-stream"
+            ),
+            secret_value_unref
+        };
+        object_ptr<SecretItem> const item{
+            secret_item_create_sync(
+                other_store.get(), nullptr, fields.get(), "osvault test", value.get(), SECRET_ITEM_CREATE_NONE, nullptr,
+                std::out_ptr(error)
+            ),
+            g_object_unref
+        };
+        REQUIRE(item);
+    }
+    auto const check_neighbor = [&] {
+        for (auto const key : {"shared"sv, "other-only"sv}) {
+            check_record(storage, key, other_value, SECRET_COLLECTION_SESSION);
+        }
+    };
+
+    auto const missing = storage.try_read("other-only");
+    REQUIRE_FALSE(missing);
+    CHECK(missing.error() == std::make_error_code(std::errc::no_such_file_or_directory));
+    CHECK(storage.get_keys().empty());
+    CHECK_FALSE(storage.erase("other-only"));
+    storage.clear();
+    check_neighbor();
+
+    std::vector const value{std::byte{0x11}, std::byte{0}, std::byte{0x80}};
+    storage.write("shared", value);
+    CHECK(storage.read("shared") == value);
+    CHECK(storage.get_keys() == std::vector{"shared"s});
+    check_record(storage, "shared", value);
+    check_neighbor();
+
+    CHECK(storage.erase("shared"));
+    check_absent(storage, "shared");
+    check_neighbor();
+
+    storage.write("shared", value);
+    storage.clear();
+    CHECK(storage.get_keys().empty());
+    check_absent(storage, "shared");
+    check_neighbor();
 }
 
 TEST_CASE("vault fixture unwinding", "[native][cleanup]") {
