@@ -118,6 +118,8 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/osvault-config.cmake"
         DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/osvault"
 )
 
+install(FILES LICENSE DESTINATION "${CMAKE_INSTALL_DOCDIR}")
+
 # Keep the IDE copy local to development builds that generate a compile database
 if(PROJECT_IS_TOP_LEVEL
    AND CMAKE_EXPORT_COMPILE_COMMANDS

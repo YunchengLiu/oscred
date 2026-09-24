@@ -1,5 +1,16 @@
 @PACKAGE_INIT@
 
+if("@LINUX@" AND NOT "@BUILD_SHARED_LIBS@")
+    include(CMakeFindDependencyMacro)
+    find_dependency(PkgConfig)
+    pkg_check_modules(libsecret QUIET IMPORTED_TARGET libsecret-1>=0.18 gio-2.0>=2.48)
+    if(NOT libsecret_FOUND)
+        set(osvault_FOUND FALSE)
+        set(osvault_NOT_FOUND_MESSAGE "osvault requires libsecret >= 0.18 and GIO >= 2.48")
+        return()
+    endif()
+endif()
+
 include("${CMAKE_CURRENT_LIST_DIR}/osvault-targets.cmake")
 
 check_required_components(osvault)
