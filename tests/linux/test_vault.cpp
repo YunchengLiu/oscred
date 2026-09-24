@@ -239,6 +239,8 @@ namespace {
             storage.try_get_keys() != std::unexpected{error} || storage.try_clear() != error) {
             return 1;
         }
+#ifdef OSVAULT_STATIC
+        // Direct registry inspection requires the test and backend to share the same linked GLib instance
         if (kind == "locked") {
             // Exercise the backend's registered prompt overrides with a real authorization request
             error_ptr                       native{nullptr, g_error_free};
@@ -266,6 +268,7 @@ namespace {
                 return 1;
             }
         }
+#endif
         auto const same_error = [error](auto const operation) {
             try {
                 operation();

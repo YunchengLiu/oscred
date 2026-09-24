@@ -2,6 +2,11 @@ file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/test_*.cpp")
 target_sources(osvault-tests PRIVATE ${sources})
 unset(sources)
 
+# Keep direct helper coverage without exporting private shared-library symbols
+if(BUILD_SHARED_LIBS)
+    target_sources(osvault-tests PRIVATE "${PROJECT_SOURCE_DIR}/osvault/linux/error.cpp")
+endif()
+
 target_link_libraries(osvault-tests PRIVATE PkgConfig::libsecret)
 find_program(bash NAMES bash REQUIRED)
 

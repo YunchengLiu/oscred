@@ -6,6 +6,7 @@
 #include <string_view>
 #include <system_error>
 #include <vector>
+#include "osvault/export.h"
 
 namespace osvault {
 
@@ -38,18 +39,18 @@ namespace osvault {
         static constexpr std::string_view default_name = "_";
 
         /// @brief Create a vault with the default name
-        vault();
+        OSVAULT_EXPORT vault();
 
         /// @brief Create a vault with a specific name
         /// @param name The name of the vault
         /// @exception std::invalid_argument The name is empty or contains a null byte
-        explicit vault(std::string name);
+        OSVAULT_EXPORT explicit vault(std::string name);
         ~vault() noexcept = default;
 
-        vault(vault const&)            = delete;
-        vault& operator=(vault const&) = delete;
-        vault(vault&& other) noexcept;
-        vault& operator=(vault&& other) noexcept;
+        vault(vault const&)                           = delete;
+        vault&                operator=(vault const&) = delete;
+        OSVAULT_EXPORT        vault(vault&& other) noexcept;
+        OSVAULT_EXPORT vault& operator=(vault&& other) noexcept;
 
         [[nodiscard]] std::string_view name() const noexcept {
             return name_;
@@ -59,58 +60,59 @@ namespace osvault {
         ///
         /// @return Zero if the bound name leaves no room for a key or the object was moved from
         /// @retval SIZE_MAX No known fixed limit; operations may still reject large inputs
-        [[nodiscard]] std::size_t max_key_size() const noexcept;
+        [[nodiscard]] OSVAULT_EXPORT std::size_t max_key_size() const noexcept;
 
         /// @brief Get the maximum value size in bytes on the current native platform
         ///
         /// @retval SIZE_MAX No known fixed limit; operations may still reject large inputs
-        [[nodiscard]] std::size_t max_value_size() const noexcept;
+        [[nodiscard]] OSVAULT_EXPORT std::size_t max_value_size() const noexcept;
 
         /// @brief Read the value for a key
         ///
         /// @exception std::system_error The key is absent or the operation fails
-        [[nodiscard]] std::vector<std::byte> read(std::string_view key) const;
+        [[nodiscard]] OSVAULT_EXPORT std::vector<std::byte> read(std::string_view key) const;
 
         /// @brief Store a value for a key, replacing any existing value
         ///
         /// @exception std::system_error The operation fails
-        void write(std::string_view key, std::span<std::byte const> value);
+        OSVAULT_EXPORT void write(std::string_view key, std::span<std::byte const> value);
 
         /// @brief Remove a key and its value
         ///
         /// @return True if removed, false if already absent
         /// @exception std::system_error The operation fails
-        [[nodiscard]] bool erase(std::string_view key);
+        [[nodiscard]] OSVAULT_EXPORT bool erase(std::string_view key);
 
         /// @brief List keys in this vault
         ///
         /// @exception std::system_error The operation fails
-        [[nodiscard]] std::vector<std::string> get_keys() const;
+        [[nodiscard]] OSVAULT_EXPORT std::vector<std::string> get_keys() const;
 
         /// @brief Remove all entries from this vault
         ///
         /// @details A failure may leave some entries already removed
         /// Cleanup can be retried with this object or another vault with the same name in the same storage context
         /// @exception std::system_error The operation fails
-        void clear();
+        OSVAULT_EXPORT void clear();
 
         /// @copybrief read
-        [[nodiscard]] std::expected<std::vector<std::byte>, std::error_code> try_read(std::string_view key) const;
+        [[nodiscard]] OSVAULT_EXPORT std::expected<std::vector<std::byte>, std::error_code>
+                                     try_read(std::string_view key) const;
 
         /// @copybrief write
-        [[nodiscard]] std::error_code try_write(std::string_view key, std::span<std::byte const> value);
+        [[nodiscard]] OSVAULT_EXPORT std::error_code try_write(std::string_view key, std::span<std::byte const> value);
 
         /// @copybrief erase
         /// @return True if removed, false if already absent, or an error
-        [[nodiscard]] std::expected<bool, std::error_code> try_erase(std::string_view key);
+        [[nodiscard]] OSVAULT_EXPORT std::expected<bool, std::error_code> try_erase(std::string_view key);
 
         /// @copybrief get_keys
-        [[nodiscard]] std::expected<std::vector<std::string>, std::error_code> try_get_keys() const;
+        [[nodiscard]] OSVAULT_EXPORT std::expected<std::vector<std::string>, std::error_code> try_get_keys() const;
 
         /// @copybrief clear
         /// @details A failure may leave some entries already removed
         /// Cleanup can be retried with this object or another vault with the same name in the same storage context
-        [[nodiscard]] std::error_code try_clear();
+        [[nodiscard]] OSVAULT_EXPORT std::error_code try_clear();
     };
 
 } // namespace osvault

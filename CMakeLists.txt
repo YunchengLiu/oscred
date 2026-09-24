@@ -27,6 +27,15 @@ endfunction()
 add_library(osvault)
 add_library(osvault::osvault ALIAS osvault)
 
+set_target_properties(osvault PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
+include(GenerateExportHeader)
+generate_export_header(
+    osvault EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/include/osvault/export.h" STATIC_DEFINE OSVAULT_STATIC
+)
+if(NOT BUILD_SHARED_LIBS)
+    target_compile_definitions(osvault PUBLIC OSVAULT_STATIC)
+endif()
+
 if(WIN32)
     set(backend windows)
 elseif(LINUX)
@@ -35,6 +44,10 @@ elseif(LINUX)
     # The object APIs are stable since libsecret 0.18; G_IO_ERROR_MESSAGE_TOO_LARGE requires GIO 2.48
     pkg_check_modules(libsecret REQUIRED IMPORTED_TARGET libsecret-1>=0.18 gio-2.0>=2.48)
     target_link_libraries(osvault PRIVATE PkgConfig::libsecret)
+    if(BUILD_SHARED_LIBS)
+        # Keep symbols from static dependencies out of the shared library's exported interface
+        target_link_options(osvault PRIVATE "LINKER:--exclude-libs,ALL")
+    endif()
 else()
     message(
         FATAL_ERROR "osvault has no native backend for ${CMAKE_SYSTEM_NAME}; available targets are Windows and Linux"
@@ -50,6 +63,14 @@ target_sources(
     osvault
     PRIVATE ${sources}
     PUBLIC FILE_SET HEADERS BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}" FILES osvault/osvault.h
+    PUBLIC FILE_SET
+           generated
+           TYPE
+           HEADERS
+           BASE_DIRS
+           "${CMAKE_CURRENT_BINARY_DIR}/include"
+           FILES
+           "${CMAKE_CURRENT_BINARY_DIR}/include/osvault/export.h"
 )
 
 unset(sources)
@@ -80,6 +101,8 @@ install(
     TARGETS osvault
     EXPORT osvault-targets
     FILE_SET HEADERS
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    FILE_SET generated
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 

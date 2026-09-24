@@ -71,13 +71,16 @@ EOF
 
 start_keyring() {
     local mode=$1 daemon i
-    local -a command=(gnome-keyring-daemon --foreground --components=secrets
-                      "--control-directory=$XDG_RUNTIME_DIR")
-    if [[ $mode == unlocked ]]; then
-        printf 'osvault-isolated-test\n' | "${command[@]}" --unlock >"$OSVAULT_TEST_SCOPE/daemon.log" 2>&1 &
-    else
-        "${command[@]}" >"$OSVAULT_TEST_SCOPE/daemon.log" 2>&1 </dev/null &
-    fi
+    local -a command=(gnome-keyring-daemon --foreground --components=secrets --control-directory=.)
+    # A relative control socket avoids the Unix socket path limit in long build directories
+    (
+        cd -- "$XDG_RUNTIME_DIR"
+        if [[ $mode == unlocked ]]; then
+            exec "${command[@]}" --unlock <<< 'osvault-isolated-test'
+        else
+            exec "${command[@]}" </dev/null
+        fi
+    ) >"$OSVAULT_TEST_SCOPE/daemon.log" 2>&1 &
     daemon=$!
     for ((i=0; i<100; ++i)); do
         kill -0 "$daemon" 2>/dev/null || fail 'Private keyring exited during startup'
