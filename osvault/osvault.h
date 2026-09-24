@@ -23,6 +23,10 @@ namespace osvault {
     /// Destroying the vault object does not remove the stored entries
     /// Entries also remain available after the writing process exits
     ///
+    /// Storage operations are synchronous and do not display authorization or unlock prompts
+    /// An operation that requires interaction reports an error
+    /// Linux requires an existing, unlocked default Secret Service collection
+    ///
     /// Moved-from objects have an empty name and reject storage operations with std::errc::invalid_argument
     /// The try_ operations report operation errors but may still throw on allocation failure
     /// @pre Callers must serialize storage operations within the same user storage context across objects,
@@ -54,9 +58,12 @@ namespace osvault {
         /// @brief Get the maximum key length in bytes on the current native platform
         ///
         /// @return Zero if the bound name leaves no room for a key or the object was moved from
+        /// @retval SIZE_MAX No known fixed limit; operations may still reject large inputs
         [[nodiscard]] std::size_t max_key_size() const noexcept;
 
         /// @brief Get the maximum value size in bytes on the current native platform
+        ///
+        /// @retval SIZE_MAX No known fixed limit; operations may still reject large inputs
         [[nodiscard]] std::size_t max_value_size() const noexcept;
 
         /// @brief Read the value for a key

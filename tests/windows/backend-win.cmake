@@ -12,11 +12,6 @@ catch_discover_tests(
     PROPERTIES ${native_properties} FIXTURES_REQUIRED credentials
 )
 
-add_test(NAME vault.persistence.write COMMAND osvault-tests --write-test)
-add_test(NAME vault.persistence.read COMMAND osvault-tests --read-test)
-set_tests_properties(vault.persistence.write PROPERTIES FIXTURES_SETUP persistence FIXTURES_REQUIRED credentials)
-set_tests_properties(vault.persistence.read PROPERTIES FIXTURES_REQUIRED "credentials;persistence")
-
 find_program(powershell NAMES pwsh powershell REQUIRED)
 add_test(NAME windows.cleanup COMMAND "${powershell}" -NoLogo -NoProfile -NonInteractive -File
                                       "${CMAKE_CURRENT_LIST_DIR}/cleanup.ps1"

@@ -31,15 +31,28 @@ endfunction()
 add_library(osvault)
 add_library(osvault::osvault ALIAS osvault)
 
-file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/osvault/*.cpp")
-
 if(WIN32)
-    file(GLOB win_sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/osvault/windows/*.cpp"
-         "${CMAKE_CURRENT_SOURCE_DIR}/osvault/windows/*.h"
+    set(backend windows)
+elseif(LINUX)
+    set(backend linux)
+    find_package(PkgConfig REQUIRED)
+    block()
+    # Include private link dependencies for vcpkg's static libsecret
+    list(APPEND PKG_CONFIG_ARGN --static)
+    # The object APIs are stable since libsecret 0.18; G_IO_ERROR_MESSAGE_TOO_LARGE requires GIO 2.48
+    pkg_check_modules(libsecret REQUIRED IMPORTED_TARGET libsecret-1>=0.18 gio-2.0>=2.48)
+    endblock()
+    target_link_libraries(osvault PRIVATE PkgConfig::libsecret)
+else()
+    message(
+        FATAL_ERROR "osvault has no native backend for ${CMAKE_SYSTEM_NAME}; available targets are Windows and Linux"
     )
-    list(APPEND sources ${win_sources})
-    unset(win_sources)
 endif()
+
+file(GLOB sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/osvault/*.cpp"
+     "${CMAKE_CURRENT_SOURCE_DIR}/osvault/${backend}/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/osvault/${backend}/*.h"
+)
+unset(backend)
 
 target_sources(
     osvault

@@ -12,6 +12,9 @@
 #if defined(_WIN32)
 #include "windows/backend.h"
 namespace backend = osvault::windows;
+#elif defined(__linux__)
+#include "linux/backend.h"
+namespace backend = osvault::linux_backend;
 #else
 #error "osvault has no native backend for this platform yet"
 #endif
