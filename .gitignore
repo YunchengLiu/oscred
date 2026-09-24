@@ -55,9 +55,6 @@ CMakeUserPresets.json
 *.bak
 *.swp
 
-# vcpkg
-vcpkg_installed/
-
 # debug information files
 *.dwo
 

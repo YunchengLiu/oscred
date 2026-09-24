@@ -1,4 +1,17 @@
-find_package(Catch2 3.16 CONFIG REQUIRED)
+option(OSVAULT_USE_EXTERNAL_CATCH2 "Use an installed Catch2 package." OFF)
+
+if(OSVAULT_USE_EXTERNAL_CATCH2)
+    find_package(Catch2 3 CONFIG REQUIRED)
+else()
+    include(FetchContent)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.16.0
+        EXCLUDE_FROM_ALL
+    )
+    FetchContent_MakeAvailable(Catch2)
+endif()
 
 add_executable(osvault-tests)
 
