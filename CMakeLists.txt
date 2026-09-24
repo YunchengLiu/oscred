@@ -1,16 +1,12 @@
 cmake_minimum_required(VERSION 3.28)
 
-# Select test dependencies before the vcpkg toolchain processes the manifest
-option(BUILD_TESTING "Build the testing tree." ON)
-if(BUILD_TESTING)
-    list(APPEND VCPKG_MANIFEST_FEATURES tests)
-endif()
-
 project(
     osvault
     VERSION 0.1.0
     LANGUAGES CXX
 )
+
+option(OSVAULT_BUILD_TESTING "Build osvault tests." ${PROJECT_IS_TOP_LEVEL})
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -36,12 +32,8 @@ if(WIN32)
 elseif(LINUX)
     set(backend linux)
     find_package(PkgConfig REQUIRED)
-    block()
-    # Include private link dependencies for vcpkg's static libsecret
-    list(APPEND PKG_CONFIG_ARGN --static)
     # The object APIs are stable since libsecret 0.18; G_IO_ERROR_MESSAGE_TOO_LARGE requires GIO 2.48
     pkg_check_modules(libsecret REQUIRED IMPORTED_TARGET libsecret-1>=0.18 gio-2.0>=2.48)
-    endblock()
     target_link_libraries(osvault PRIVATE PkgConfig::libsecret)
 else()
     message(
@@ -66,9 +58,8 @@ target_compile_features(osvault PUBLIC cxx_std_23)
 target_link_libraries(osvault PRIVATE "$<$<PLATFORM_ID:Windows>:Advapi32>")
 osvault_setup_target(osvault)
 
-include(CTest)
-
-if(BUILD_TESTING)
+if(OSVAULT_BUILD_TESTING)
+    enable_testing()
     add_subdirectory(tests)
 endif()
 
