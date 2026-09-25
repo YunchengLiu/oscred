@@ -1,6 +1,7 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdio>
 #include <cwctype>
@@ -186,6 +187,18 @@ TEST_CASE_FIXTURE(vault_fixture, "vault replacement" * doctest::test_suite("nati
     REQUIRE_FALSE(storage.try_write("bytes", std::span{value}.first(1)));
     CHECK(storage.read("bytes") == std::vector{std::byte{0}});
     check_record(storage, "bytes", std::span{value}.first(1));
+}
+
+TEST_CASE_FIXTURE(vault_fixture, "vault bounded key views" * doctest::test_suite("native")) {
+    osvault::vault   storage{group()};
+    std::array const input{'k', 'e', 'y', 'x'};
+    auto const       key = std::string_view{input.data(), 3};
+    storage.write(key, {});
+    CHECK(storage.get_keys() == std::vector{"key"s});
+    CHECK(storage.read(key).empty());
+    check_record(storage, "key", {});
+    CHECK(storage.erase(key));
+    check_absent(storage, "key");
 }
 
 TEST_CASE_FIXTURE(vault_fixture, "vault missing records" * doctest::test_suite("native")) {

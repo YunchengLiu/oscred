@@ -1,8 +1,6 @@
 #include "hex_codec.h"
 #include <charconv>
 #include <cstddef>
-#include <format>
-#include <iterator>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -18,9 +16,12 @@ namespace osvault::detail {
             throw std::length_error{"Hexadecimal encoding exceeds the string size limit"};
         }
         encoded.reserve(input.size() * 2);
+        constexpr std::string_view digits = "0123456789ABCDEF";
         // Preserve high-bit bytes even when char is signed
         for (auto const ch : input) {
-            std::format_to(std::back_inserter(encoded), "{:02X}", static_cast<unsigned char>(ch));
+            auto const byte = static_cast<unsigned char>(ch);
+            encoded.push_back(digits.at(byte >> 4));
+            encoded.push_back(digits.at(byte & 0x0F));
         }
         return encoded;
     }
@@ -32,8 +33,9 @@ namespace osvault::detail {
         std::string decoded;
         decoded.reserve(input.size() / 2);
         for (std::size_t index = 0; index < input.size(); index += 2) {
-            auto const*  first = input.data() + index; // NOLINT
-            auto const*  last  = first + 2;            // NOLINT
+            auto const   pair  = input.substr(index, 2);
+            auto const*  first = pair.data();
+            auto const*  last  = pair.data() + pair.size(); // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             unsigned int byte{};
             // Unsigned parsing rejects signs; full consumption rejects partial matches such as "0G"
             auto const [ptr, error] = std::from_chars(first, last, byte, 16);

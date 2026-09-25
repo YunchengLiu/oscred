@@ -1,4 +1,3 @@
-#include <cstddef>
 #include <format>
 #include <ostream>
 #include <string>
@@ -26,12 +25,10 @@ TEST_CASE("hex encoding" * doctest::test_suite("hex")) {
 TEST_CASE("hex byte encoding" * doctest::test_suite("hex")) {
     std::string input;
     std::string expected;
-    // An independent oracle catches mistakes in the production formatter's width and signedness
-    constexpr auto digits = "0123456789ABCDEF"sv;
+    // Use formatting as an independent oracle for the production digit lookup
     for (int value = 0; value < 256; ++value) {
         input.push_back(static_cast<char>(value));
-        expected.push_back(digits[static_cast<std::size_t>(value) / 16]);
-        expected.push_back(digits[static_cast<std::size_t>(value) % 16]);
+        expected += std::format("{:02X}", value);
     }
     CHECK(osvault::detail::encode_hex(input) == expected);
 }

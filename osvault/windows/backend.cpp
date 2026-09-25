@@ -6,6 +6,7 @@
 #include <format>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -53,14 +54,13 @@ namespace osvault::detail {
             credentials result;
             // keep the filter alive until the error is captured; deallocation may change GetLastError
             auto const filter = prefix + L"*";
-            // credEnumerate returns the array and entries in one CredFree-owned block
+            // CredEnumerateW returns the array and entries in one CredFree-owned block
             if (CredEnumerateW(filter.c_str(), 0, &result.count, std::out_ptr(result.entries)) == 0) {
                 auto const error = last_error();
                 if (error.value() != ERROR_NOT_FOUND) {
                     return std::unexpected{error};
                 }
                 result.count = 0;
-                return result;
             }
             return result;
         }
@@ -70,11 +70,12 @@ namespace osvault::detail {
                 return std::nullopt;
             }
             std::wstring_view const target{record.TargetName};
-            // credEnumerate already guarantees the filter prefix; the suffix remains external data
+            // CredEnumerateW already guarantees the filter prefix; the suffix remains external data
             assert(target.size() >= prefix.size());
             assert(
                 CompareStringOrdinal(
-                    // NOLINTNEXTLINE
+                    // Both strings have explicit lengths; the check does not model this Win32 API
+                    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
                     target.data(), static_cast<int>(prefix.size()), prefix.data(), static_cast<int>(prefix.size()), TRUE
                 ) == CSTR_EQUAL
             );
@@ -82,7 +83,9 @@ namespace osvault::detail {
             if (!std::ranges::all_of(suffix, [](wchar_t const ch) noexcept { return ch <= 0x7F; })) {
                 return std::nullopt;
             }
-            auto key = decode_hex(std::string{suffix.begin(), suffix.end()});
+            auto const narrow =
+                suffix | std::views::transform([](wchar_t const ch) noexcept { return static_cast<char>(ch); });
+            auto key = decode_hex(std::ranges::to<std::string>(narrow));
             // stored records may bypass vault's input validation; only valid decoded keys belong to this format
             if (!key || key->empty() || key->contains('\0')) {
                 return std::nullopt;
@@ -133,7 +136,7 @@ namespace osvault::detail {
         record.Persist            = CRED_PERSIST_LOCAL_MACHINE;
         record.CredentialBlobSize = static_cast<DWORD>(value.size());
         // WinCred declares mutable pointers but reads the supplied blob during this call
-        // NOLINTNEXTLINE
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast, cppcoreguidelines-pro-type-const-cast)
         record.CredentialBlob = reinterpret_cast<LPBYTE>(const_cast<std::byte*>(value.data()));
         if (CredWriteW(&record, 0) == 0) {
             return last_error();
