@@ -1,0 +1,109 @@
+name: CI
+
+on:
+    pull_request:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ci-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    lint:
+        name: Lint
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        steps:
+            - uses: actions/checkout@v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Check workflows
+              uses: raven-actions/actionlint@v2.2.0
+              with:
+                  version: '1.7.12'
+                  pyflakes: false
+
+            - name: Check CMake formatting
+              run: |
+                  git ls-files -z '*CMakeLists.txt' '*.cmake' '*.cmake.in' |
+                      xargs -0 pipx run --spec cmakelang==0.6.13 cmake-format --check
+
+            - name: Check Bash scripts
+              run: shellcheck --external-sources --source-path=SCRIPTDIR tests/linux/*.sh .github/scripts/*.sh
+
+            - name: Check PowerShell syntax
+              shell: pwsh
+              run: |
+                  Get-ChildItem tests -Recurse -Filter *.ps1 | ForEach-Object {
+                      $parseErrors = $null
+                      [void][System.Management.Automation.Language.Parser]::ParseFile(
+                          $_.FullName, [ref]$null, [ref]$parseErrors)
+                      if ($parseErrors) { throw ($parseErrors -join "`n") }
+                  }
+
+    build-and-test:
+        name: ${{ matrix.platform.preset_prefix }}-${{ matrix.configuration }} / ${{ matrix.linkage.name }}
+        needs: lint
+        runs-on: ${{ matrix.platform.runner }}
+        timeout-minutes: 20
+        strategy:
+            fail-fast: false
+            max-parallel: 4
+            matrix:
+                platform:
+                    - {runner: windows-2022, preset_prefix: win-msvc}
+                    - {runner: ubuntu-24.04, preset_prefix: linux-gcc}
+                configuration: [dbg, rel, reldbg, minrel]
+                linkage:
+                    - {name: static, shared: 'OFF'}
+                    - {name: shared, shared: 'ON'}
+        defaults:
+            run:
+                shell: bash
+        env:
+            PRESET: ${{ matrix.platform.preset_prefix }}-${{ matrix.configuration }}
+            BUILD_SHARED_LIBS: ${{ matrix.linkage.shared }}
+            CMAKE_BUILD_PARALLEL_LEVEL: 2
+
+        steps:
+            - uses: actions/checkout@v7.0.1
+              with:
+                  persist-credentials: false
+
+            - name: Set up MSVC
+              if: runner.os == 'Windows'
+              uses: ilammy/msvc-dev-cmd@v1.13.0
+              with:
+                  arch: x64
+
+            - name: Set up Linux build and test environment
+              if: runner.os == 'Linux'
+              run: bash .github/scripts/setup-linux.sh "build/$PRESET/tools"
+
+            - name: Configure
+              run: cmake --preset "$PRESET" -DBUILD_SHARED_LIBS="$BUILD_SHARED_LIBS"
+
+            - name: Build
+              run: cmake --build --preset "$PRESET"
+
+            - name: Test
+              # CTest fixtures own native setup and cleanup, including test failures.
+              run: ctest --preset "$PRESET" --no-tests=error --timeout 120
+
+            - name: Upload failure logs
+              if: failure()
+              uses: actions/upload-artifact@v7.0.1
+              with:
+                  name: logs-${{ env.PRESET }}-${{ matrix.linkage.name }}
+                  retention-days: 3
+                  if-no-files-found: ignore
+                  path: |
+                      build/${{ env.PRESET }}/cache/Testing/Temporary/*.log
+                      build/${{ env.PRESET }}/cache/CMakeFiles/CMakeConfigureLog.yaml
+                      build/${{ env.PRESET }}/native-tests/**/*.log
