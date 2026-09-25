@@ -19,6 +19,8 @@ namespace osvault {
     /// Names and keys are nonempty UTF-8 byte strings without null bytes
     /// Both are compared byte-for-byte; encoding is not validated or normalized
     /// Values may be empty
+    /// Names and keys are metadata and are not protected as secrets
+    /// Vault names group records; they do not provide authorization boundaries between applications
     ///
     /// Entries are stored in the current user's native storage context
     /// Destroying the vault object does not remove the stored entries
