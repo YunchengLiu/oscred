@@ -27,7 +27,15 @@ endfunction()
 add_library(osvault)
 add_library(osvault::osvault ALIAS osvault)
 
-set_target_properties(osvault PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
+# Keep Debug installations distinct; 0.x releases share an ABI only within the same minor version
+set_target_properties(
+    osvault
+    PROPERTIES CXX_VISIBILITY_PRESET hidden
+               VISIBILITY_INLINES_HIDDEN YES
+               DEBUG_POSTFIX d
+               VERSION ${PROJECT_VERSION}
+               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+)
 include(GenerateExportHeader)
 generate_export_header(
     osvault EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/include/osvault/export.h" STATIC_DEFINE OSVAULT_STATIC
@@ -94,7 +102,7 @@ configure_package_config_file(
 write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/osvault-config-version.cmake"
     VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
+    COMPATIBILITY SameMinorVersion
 )
 
 install(
