@@ -1,4 +1,5 @@
 ---
+# Formatting baseline: clang-format 22.x
 BasedOnStyle: LLVM
 Language: Cpp
 Standard: Latest
