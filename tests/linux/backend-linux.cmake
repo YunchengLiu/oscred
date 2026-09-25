@@ -33,12 +33,14 @@ set(native_environment
     "DBUS_SESSION_BUS_PID="
 )
 set(native_properties LABELS native RESOURCE_LOCK linux_secret_service TIMEOUT 30)
-catch_discover_tests(
+doctest_discover_tests(
     osvault-tests
-    TEST_SPEC "[native]" TEST_LIST osvault_linux_native_tests
+    TEST_SPEC "*" "--test-suite=native"
+    ADD_LABELS 1
+    TEST_LIST osvault_linux_native_tests
     PROPERTIES ${native_properties} FIXTURES_REQUIRED credentials
 )
-# Apply list-valued properties after Catch has discovered the native test names
+# Apply list-valued properties after doctest has discovered the native test names
 file(CONFIGURE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/linux-environment.cmake" CONTENT
      [=[set_tests_properties(${osvault_linux_native_tests} PROPERTIES ENVIRONMENT [==[@native_environment@]==])
 ]=] @ONLY

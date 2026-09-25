@@ -13,9 +13,10 @@ target_link_libraries(osvault-tests PRIVATE Advapi32)
 
 # Serialize access to the user's credential store and always schedule final cleanup
 set(native_properties LABELS native RESOURCE_LOCK windows_credentials)
-catch_discover_tests(
+doctest_discover_tests(
     osvault-tests
-    TEST_SPEC "[native]"
+    TEST_SPEC "*" "--test-suite=native"
+    ADD_LABELS 1
     PROPERTIES ${native_properties} FIXTURES_REQUIRED credentials
 )
 

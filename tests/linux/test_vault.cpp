@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -9,6 +11,7 @@
 #include <format>
 #include <limits>
 #include <memory>
+#include <ostream>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -16,14 +19,13 @@
 #include <system_error>
 #include <utility>
 #include <vector>
-#include <catch2/catch_session.hpp>
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_predicate.hpp>
+#include <doctest/doctest.h>
 #include <gio/gio.h>
 #include <libsecret/secret.h>
 #include <osvault/osvault.h>
 #include <glib-object.h>
 #include <glib.h>
+#include "../error.h"
 
 using std::string_literals::operator""s;
 using std::string_view_literals::operator""sv;
@@ -180,12 +182,6 @@ namespace {
         }
     };
 
-    [[nodiscard]] auto error_is(std::error_code const code) {
-        return Catch::Matchers::Predicate<std::system_error>(
-            [code](std::system_error const& error) noexcept { return error.code() == code; }, "the same operation error"
-        );
-    }
-
     void check_record(
         osvault::vault const& storage, std::string_view const key, std::span<std::byte const> const value,
         char const* const alias = SECRET_COLLECTION_DEFAULT
@@ -308,7 +304,7 @@ int main(int const argc, char** const argv) {
         if (argc == 3 && std::string_view{argv[1]} == "--expect-error") {
             return check_failure(argv[2]);
         }
-        auto const result = Catch::Session().run(argc, argv);
+        auto const result = doctest::Context(argc, argv).run();
         return result != 0 ? result : (cleanup_failed ? 1 : 0);
     } catch (std::exception const& error) {
         std::fprintf(stderr, "%s\n", error.what());
@@ -316,7 +312,7 @@ int main(int const argc, char** const argv) {
     }
 }
 
-TEST_CASE("linux session bus identity", "[linux]") {
+TEST_CASE("linux session bus identity" * doctest::test_suite("linux")) {
     constexpr auto session = "session-0123456789ab"sv;
     CHECK(matches_session_bus(session, "unix:abstract=osvault-0123456789ab"));
     CHECK_FALSE(matches_session_bus(session, "unix:abstract=osvault-fedcba987654"));
@@ -326,12 +322,12 @@ TEST_CASE("linux session bus identity", "[linux]") {
     CHECK_FALSE(matches_session_bus(session, "unix:abstract=osvault-0123456789ab-missing", "locked"));
 }
 
-TEST_CASE("linux invalid failure scenario", "[linux]") {
+TEST_CASE("linux invalid failure scenario" * doctest::test_suite("linux")) {
     CHECK_THROWS_AS(check_failure("unknown"), std::invalid_argument);
     CHECK_THROWS_AS(check_failure(""), std::invalid_argument);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault binary round trip", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault binary round trip" * doctest::test_suite("native")) {
     osvault::vault    storage{group()};
     std::vector const value{std::byte{0}, std::byte{0x7F}, std::byte{0x80}, std::byte{0xFF}};
     storage.write("bytes", value);
@@ -340,7 +336,7 @@ TEST_CASE_METHOD(vault_fixture, "vault binary round trip", "[native][vault]") {
     CHECK(osvault::vault{group()}.try_read("bytes") == value);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault replacement", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault replacement" * doctest::test_suite("native")) {
     osvault::vault    storage{group()};
     std::vector const value{std::byte{0}, std::byte{0xFF}};
     storage.write("bytes", value);
@@ -349,7 +345,7 @@ TEST_CASE_METHOD(vault_fixture, "vault replacement", "[native][vault]") {
     check_record(storage, "bytes", std::span{value}.first(1));
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault bounded key views", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault bounded key views" * doctest::test_suite("native")) {
     osvault::vault   storage{group()};
     std::array const input{'k', 'e', 'y', 'x'};
     auto const       key = std::string_view{input.data(), 3};
@@ -361,19 +357,19 @@ TEST_CASE_METHOD(vault_fixture, "vault bounded key views", "[native][vault]") {
     check_absent(storage, "key");
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault missing records", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault missing records" * doctest::test_suite("native")) {
     osvault::vault storage{group()};
     CHECK(storage.get_keys().empty());
     CHECK_FALSE(storage.try_clear());
     auto const missing = storage.try_read("empty");
     REQUIRE_FALSE(missing);
     CHECK(missing.error() == std::make_error_code(std::errc::no_such_file_or_directory));
-    CHECK_THROWS_MATCHES(storage.read("empty"), std::system_error, error_is(missing.error()));
+    expect_throw_with_code([&] { return storage.read("empty"); }, missing.error());
     CHECK_FALSE(storage.erase("empty"));
     CHECK(storage.try_erase("empty") == false);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault empty value", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault empty value" * doctest::test_suite("native")) {
     osvault::vault storage{group()};
     storage.write("empty", {});
     check_record(storage, "empty", {});
@@ -387,7 +383,7 @@ TEST_CASE_METHOD(vault_fixture, "vault empty value", "[native][vault]") {
     CHECK(storage.try_erase("empty") == false);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault key identity", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault key identity" * doctest::test_suite("native")) {
     auto expected = std::vector{"A"s, "a"s, "密钥/*"s, "A/"s, "A*"s};
     std::ranges::sort(expected);
     for (auto const suffix : {"A"sv, "a"sv, "A/密钥*"sv}) {
@@ -412,7 +408,7 @@ TEST_CASE_METHOD(vault_fixture, "vault key identity", "[native][vault]") {
     }
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault move persistence", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault move persistence" * doctest::test_suite("native")) {
     {
         osvault::vault source{group("source")};
         osvault::vault destination{group("destination")};
@@ -428,7 +424,7 @@ TEST_CASE_METHOD(vault_fixture, "vault move persistence", "[native][vault]") {
     CHECK(osvault::vault{group("destination")}.read("key").empty());
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault clear isolation", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault clear isolation" * doctest::test_suite("native")) {
     osvault::vault storage{group()};
     osvault::vault neighbor{group("0")};
     storage.write("first", {});
@@ -449,7 +445,7 @@ TEST_CASE_METHOD(vault_fixture, "vault clear isolation", "[native][vault]") {
     check_record(neighbor, "first", {});
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault collection isolation", "[native][linux][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault collection isolation" * doctest::test_suite("native")) {
     // The private provider's session collection needs no provisioning or interactive unlock
     vault_fixture const neighbor{SECRET_COLLECTION_SESSION};
     auto const [service, store]             = collection();
@@ -514,7 +510,7 @@ TEST_CASE_METHOD(vault_fixture, "vault collection isolation", "[native][linux][v
     check_neighbor();
 }
 
-TEST_CASE("vault fixture unwinding", "[native][cleanup]") {
+TEST_CASE("vault fixture unwinding" * doctest::test_suite("native")) {
     std::string name;
     auto const  interrupted = [&name] {
         vault_fixture const owned;
@@ -526,7 +522,7 @@ TEST_CASE("vault fixture unwinding", "[native][cleanup]") {
     check_absent(osvault::vault{name}, "probe");
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault unknown limits", "[native][linux][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault unknown limits" * doctest::test_suite("native")) {
     osvault::vault storage{group()};
     CHECK(storage.max_key_size() == std::numeric_limits<std::size_t>::max());
     CHECK(storage.max_value_size() == std::numeric_limits<std::size_t>::max());
@@ -537,7 +533,7 @@ TEST_CASE_METHOD(vault_fixture, "vault unknown limits", "[native][linux][vault]"
     check_record(storage, key, value);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault record filtering", "[native][linux][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault record filtering" * doctest::test_suite("native")) {
     osvault::vault storage{group()};
     auto const [service, store] = collection();
     storage.write("valid", {});

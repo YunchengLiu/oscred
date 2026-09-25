@@ -1,10 +1,12 @@
 {
     "parse": {
         "additional_commands": {
-            "catch_discover_tests": {
+            "doctest_discover_tests": {
                 "pargs": 1,
                 "kwargs": {
                     "TEST_SPEC": "*",
+                    "ADD_LABELS": 1,
+                    "TEST_LIST": 1,
                     "PROPERTIES": "*"
                 }
             }

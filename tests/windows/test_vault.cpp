@@ -1,3 +1,5 @@
+#define DOCTEST_CONFIG_IMPLEMENT
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdio>
@@ -6,6 +8,7 @@
 #include <expected>
 #include <format>
 #include <memory>
+#include <ostream>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -13,13 +16,12 @@
 #include <system_error>
 #include <utility>
 #include <vector>
-#include <catch2/catch_session.hpp>
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_predicate.hpp>
+#include <doctest/doctest.h>
 #include <osvault/osvault.h>
 #include <osvault/windows/hex_codec.h>
 #include <Windows.h>
 #include <wincred.h>
+#include "../error.h"
 
 using std::string_literals::operator""s;
 using std::string_view_literals::operator""sv;
@@ -116,12 +118,6 @@ namespace {
         }
     };
 
-    [[nodiscard]] auto error_is(std::error_code const code) {
-        return Catch::Matchers::Predicate<std::system_error>(
-            [code](std::system_error const& error) noexcept { return error.code() == code; }, "the same operation error"
-        );
-    }
-
     [[nodiscard]] std::wstring target_for(osvault::vault const& storage, std::string_view const key) {
         auto const text =
             std::format("osvlt/{}/{}", osvault::windows::encode_hex(storage.name()), osvault::windows::encode_hex(key));
@@ -165,8 +161,8 @@ int main(int argc, char* argv[]) {
             auto const expected = std::as_bytes(std::span{"persisted"sv});
             return std::ranges::equal(actual, expected) ? 0 : 1;
         }
-        auto const result = Catch::Session().run(argc, argv);
-        // A nonthrowing fixture destructor cannot report a cleanup failure through Catch2 assertions
+        auto const result = doctest::Context(argc, argv).run();
+        // A nonthrowing fixture destructor cannot report a cleanup failure through test assertions
         return result != 0 ? result : (cleanup_failed ? 1 : 0);
     } catch (std::exception const& error) {
         std::fprintf(stderr, "%s\n", error.what());
@@ -174,7 +170,7 @@ int main(int argc, char* argv[]) {
     }
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault binary round trip", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault binary round trip" * doctest::test_suite("native")) {
     osvault::vault    storage{group()};
     std::vector const value{std::byte{0}, std::byte{0x7F}, std::byte{0x80}, std::byte{0xFF}};
     storage.write("bytes", value);
@@ -183,7 +179,7 @@ TEST_CASE_METHOD(vault_fixture, "vault binary round trip", "[native][vault]") {
     CHECK(osvault::vault{group()}.try_read("bytes") == value);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault replacement", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault replacement" * doctest::test_suite("native")) {
     osvault::vault    storage{group()};
     std::vector const value{std::byte{0}, std::byte{0xFF}};
     storage.write("bytes", value);
@@ -192,19 +188,19 @@ TEST_CASE_METHOD(vault_fixture, "vault replacement", "[native][vault]") {
     check_record(storage, "bytes", std::span{value}.first(1));
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault missing records", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault missing records" * doctest::test_suite("native")) {
     osvault::vault storage{group()};
     CHECK(storage.get_keys().empty());
     CHECK_FALSE(storage.try_clear());
     auto const missing = storage.try_read("empty");
     REQUIRE_FALSE(missing);
     CHECK(missing.error() == std::error_code{ERROR_NOT_FOUND, std::system_category()});
-    CHECK_THROWS_MATCHES(storage.read("empty"), std::system_error, error_is(missing.error()));
+    expect_throw_with_code([&] { return storage.read("empty"); }, missing.error());
     CHECK_FALSE(storage.erase("empty"));
     CHECK(storage.try_erase("empty") == false);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault empty value", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault empty value" * doctest::test_suite("native")) {
     osvault::vault storage{group()};
     storage.write("empty", {});
     check_record(storage, "empty", {});
@@ -218,7 +214,7 @@ TEST_CASE_METHOD(vault_fixture, "vault empty value", "[native][vault]") {
     CHECK(storage.try_erase("empty") == false);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault key identity", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault key identity" * doctest::test_suite("native")) {
     auto expected = std::vector{"A"s, "a"s, "密钥/*"s, "A/"s, "A*"s};
     std::ranges::sort(expected);
     for (auto const suffix : {"A"sv, "a"sv, "A/密钥*"sv}) {
@@ -243,7 +239,7 @@ TEST_CASE_METHOD(vault_fixture, "vault key identity", "[native][vault]") {
     }
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault key limit", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault key limit" * doctest::test_suite("native")) {
     osvault::vault    storage{group()};
     auto const        key = std::string(storage.max_key_size(), 'x');
     std::vector const value{std::byte{0xA5}};
@@ -257,14 +253,14 @@ TEST_CASE_METHOD(vault_fixture, "vault key limit", "[native][vault]") {
     CHECK(storage.try_write(long_key, {}) == name_error);
     CHECK(storage.try_read(long_key) == std::unexpected{name_error});
     CHECK(storage.try_erase(long_key) == std::unexpected{name_error});
-    CHECK_THROWS_MATCHES(storage.write(long_key, {}), std::system_error, error_is(name_error));
-    CHECK_THROWS_MATCHES(storage.read(long_key), std::system_error, error_is(name_error));
-    CHECK_THROWS_MATCHES(storage.erase(long_key), std::system_error, error_is(name_error));
+    expect_throw_with_code([&] { return storage.write(long_key, {}); }, name_error);
+    expect_throw_with_code([&] { return storage.read(long_key); }, name_error);
+    expect_throw_with_code([&] { return storage.erase(long_key); }, name_error);
     CHECK(storage.read(key) == value);
     check_record(storage, key, value);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault value limit", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault value limit" * doctest::test_suite("native")) {
     osvault::vault    storage{group()};
     constexpr auto    key = "value"sv;
     std::vector const value(storage.max_value_size(), std::byte{0xA5});
@@ -274,12 +270,12 @@ TEST_CASE_METHOD(vault_fixture, "vault value limit", "[native][vault]") {
     auto const large       = std::vector(storage.max_value_size() + 1, std::byte{});
     auto const value_error = std::make_error_code(std::errc::value_too_large);
     CHECK(storage.try_write(key, large) == value_error);
-    CHECK_THROWS_MATCHES(storage.write(key, large), std::system_error, error_is(value_error));
+    expect_throw_with_code([&] { return storage.write(key, large); }, value_error);
     CHECK(storage.read(key) == value);
     check_record(storage, key, value);
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault move persistence", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault move persistence" * doctest::test_suite("native")) {
     {
         osvault::vault source{group("source")};
         osvault::vault destination{group("destination")};
@@ -295,7 +291,7 @@ TEST_CASE_METHOD(vault_fixture, "vault move persistence", "[native][vault]") {
     CHECK(osvault::vault{group("destination")}.read("key").empty());
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault clear isolation", "[native][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault clear isolation" * doctest::test_suite("native")) {
     osvault::vault storage{group()};
     osvault::vault neighbor{group("0")};
     storage.write("first", {});
@@ -316,7 +312,7 @@ TEST_CASE_METHOD(vault_fixture, "vault clear isolation", "[native][vault]") {
     check_record(neighbor, "first", {});
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault record filtering", "[native][windows][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault record filtering" * doctest::test_suite("native")) {
     osvault::vault     storage{group()};
     auto const         text = std::format("osvlt/{}/", osvault::windows::encode_hex(storage.name()));
     std::wstring const prefix{text.begin(), text.end()};
@@ -357,7 +353,7 @@ TEST_CASE_METHOD(vault_fixture, "vault record filtering", "[native][windows][vau
     check_absent(storage, "密钥");
 }
 
-TEST_CASE_METHOD(vault_fixture, "vault group limit", "[native][windows][vault]") {
+TEST_CASE_FIXTURE(vault_fixture, "vault group limit" * doctest::test_suite("native")) {
     osvault::vault const normal{group()};
     CHECK(normal.max_value_size() == CRED_MAX_CREDENTIAL_BLOB_SIZE);
     CHECK(7 + 2 * normal.name().size() + 2 * normal.max_key_size() == CRED_MAX_GENERIC_TARGET_NAME_LENGTH - 2);
@@ -379,11 +375,11 @@ TEST_CASE_METHOD(vault_fixture, "vault group limit", "[native][windows][vault]")
     CHECK(oversized.try_erase("x") == std::unexpected{error});
     CHECK(oversized.try_get_keys() == std::unexpected{error});
     CHECK(oversized.try_clear() == error);
-    CHECK_THROWS_MATCHES(oversized.get_keys(), std::system_error, error_is(error));
-    CHECK_THROWS_MATCHES(oversized.clear(), std::system_error, error_is(error));
+    expect_throw_with_code([&] { return oversized.get_keys(); }, error);
+    expect_throw_with_code([&] { return oversized.clear(); }, error);
 }
 
-TEST_CASE("vault fixture unwinding", "[native][cleanup]") {
+TEST_CASE("vault fixture unwinding" * doctest::test_suite("native")) {
     std::string name;
     auto const  interrupted = [&name] {
         vault_fixture const owned;
