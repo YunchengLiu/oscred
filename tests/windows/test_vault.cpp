@@ -36,7 +36,7 @@ namespace {
     };
 
     [[nodiscard]] std::wstring filter_for(std::string_view const group) {
-        auto const text = std::format("osvlt/{}*", osvault::windows::encode_hex(group));
+        auto const text = std::format("osvlt/{}*", osvault::detail::encode_hex(group));
         return {text.begin(), text.end()};
     }
 
@@ -120,7 +120,7 @@ namespace {
 
     [[nodiscard]] std::wstring target_for(osvault::vault const& storage, std::string_view const key) {
         auto const text =
-            std::format("osvlt/{}/{}", osvault::windows::encode_hex(storage.name()), osvault::windows::encode_hex(key));
+            std::format("osvlt/{}/{}", osvault::detail::encode_hex(storage.name()), osvault::detail::encode_hex(key));
         return {text.begin(), text.end()};
     }
 
@@ -314,14 +314,14 @@ TEST_CASE_FIXTURE(vault_fixture, "vault clear isolation" * doctest::test_suite("
 
 TEST_CASE_FIXTURE(vault_fixture, "vault record filtering" * doctest::test_suite("native")) {
     osvault::vault     storage{group()};
-    auto const         text = std::format("osvlt/{}/", osvault::windows::encode_hex(storage.name()));
+    auto const         text = std::format("osvlt/{}/", osvault::detail::encode_hex(storage.name()));
     std::wstring const prefix{text.begin(), text.end()};
     storage.write("valid", {});
     std::vector<std::wstring> foreign;
     for (auto const suffix : {L"", L"0", L"GG", L"00", L"410042", L"41/42", L"\u0141\u0131"}) {
         foreign.push_back(prefix + suffix);
     }
-    auto const encoded   = osvault::windows::encode_hex("密钥");
+    auto const encoded   = osvault::detail::encode_hex("密钥");
     auto       lowercase = prefix + std::wstring{encoded.begin(), encoded.end()};
     std::ranges::transform(lowercase, lowercase.begin(), std::towlower);
     // Only this case needs native writes to create records the public API cannot produce

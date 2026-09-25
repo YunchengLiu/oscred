@@ -1,4 +1,4 @@
-#include "backend.h"
+#include "osvault/backend.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -19,7 +19,7 @@
 #include <glibconfig.h>
 #include "error.h"
 
-namespace osvault::linux_backend {
+namespace osvault::detail {
     namespace {
         template<typename T>
         using object_ptr = std::unique_ptr<T, decltype(&g_object_unref)>;
@@ -293,4 +293,4 @@ namespace osvault::linux_backend {
         }
         return {};
     }
-} // namespace osvault::linux_backend
+} // namespace osvault::detail

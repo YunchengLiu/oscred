@@ -1,4 +1,4 @@
-#include "backend.h"
+#include "osvault/backend.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -16,7 +16,7 @@
 #include <wincred.h>
 #include "hex_codec.h"
 
-namespace osvault::windows {
+namespace osvault::detail {
     namespace {
 
         // WinCred's RPC string bound includes the terminator; the marker and separators use seven more characters
@@ -199,4 +199,4 @@ namespace osvault::windows {
         return {};
     }
 
-} // namespace osvault::windows
+} // namespace osvault::detail

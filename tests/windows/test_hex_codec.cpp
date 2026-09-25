@@ -19,7 +19,7 @@ TEST_CASE("hex encoding" * doctest::test_suite("hex")) {
              std::pair{"\0\x7F\x80\xFF"sv, "007F80FF"sv        }
     }) {
         CAPTURE(input);
-        CHECK(osvault::windows::encode_hex(input) == expected);
+        CHECK(osvault::detail::encode_hex(input) == expected);
     }
 }
 
@@ -33,7 +33,7 @@ TEST_CASE("hex byte encoding" * doctest::test_suite("hex")) {
         expected.push_back(digits[static_cast<std::size_t>(value) / 16]);
         expected.push_back(digits[static_cast<std::size_t>(value) % 16]);
     }
-    CHECK(osvault::windows::encode_hex(input) == expected);
+    CHECK(osvault::detail::encode_hex(input) == expected);
 }
 
 TEST_CASE("hex decoding" * doctest::test_suite("hex")) {
@@ -46,7 +46,7 @@ TEST_CASE("hex decoding" * doctest::test_suite("hex")) {
              std::pair{"007F80FF"sv,         "\0\x7F\x80\xFF"sv}
     }) {
         CAPTURE(input);
-        auto const decoded = osvault::windows::decode_hex(input);
+        auto const decoded = osvault::detail::decode_hex(input);
         REQUIRE(decoded);
         CHECK(*decoded == expected);
     }
@@ -61,7 +61,7 @@ TEST_CASE("hex byte decoding" * doctest::test_suite("hex")) {
             encoded += uppercase ? std::format("{:02X}", value) : std::format("{:02x}", value);
             expected.push_back(static_cast<char>(value));
         }
-        auto const decoded = osvault::windows::decode_hex(encoded);
+        auto const decoded = osvault::detail::decode_hex(encoded);
         REQUIRE(decoded);
         CHECK(*decoded == expected);
     }
@@ -73,6 +73,6 @@ TEST_CASE("hex invalid input" * doctest::test_suite("hex")) {
           "\xFF"
           "0"sv}) {
         CAPTURE(input);
-        CHECK_FALSE(osvault::windows::decode_hex(input));
+        CHECK_FALSE(osvault::detail::decode_hex(input));
     }
 }

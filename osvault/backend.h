@@ -7,7 +7,7 @@
 #include <system_error>
 #include <vector>
 
-namespace osvault::windows {
+namespace osvault::detail {
 
     [[nodiscard]] std::size_t max_key_size(std::string_view group) noexcept;
 
@@ -25,4 +25,4 @@ namespace osvault::windows {
 
     [[nodiscard]] std::error_code try_clear(std::string_view group);
 
-} // namespace osvault::windows
+} // namespace osvault::detail

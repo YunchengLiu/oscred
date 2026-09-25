@@ -3,7 +3,7 @@
 #include <string>
 #include <string_view>
 
-namespace osvault::windows {
+namespace osvault::detail {
 
     /// @brief Encode arbitrary bytes as uppercase hex
     ///
@@ -15,4 +15,4 @@ namespace osvault::windows {
     /// @return Decoded bytes, or nullopt for odd length or invalid digits
     [[nodiscard]] std::optional<std::string> decode_hex(std::string_view input);
 
-} // namespace osvault::windows
+} // namespace osvault::detail

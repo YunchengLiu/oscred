@@ -32,7 +32,7 @@ namespace {
 
 TEST_CASE("linux native error lifetime" * doctest::test_suite("linux")) {
     GError const native{.domain = G_DBUS_ERROR, .code = G_DBUS_ERROR_SERVICE_UNKNOWN, .message = nullptr};
-    retained.error = osvault::linux_backend::native_error(native);
+    retained.error = osvault::detail::native_error(native);
     REQUIRE(retained.error);
     CHECK(retained.error.value() == G_DBUS_ERROR_SERVICE_UNKNOWN);
 }
@@ -61,7 +61,7 @@ TEST_CASE("linux standard operation errors" * doctest::test_suite("linux")) {
         CAPTURE(g_quark_to_string(domain));
         CAPTURE(code);
         GError const native{.domain = domain, .code = code, .message = nullptr};
-        auto const   error = osvault::linux_backend::native_error(native);
+        auto const   error = osvault::detail::native_error(native);
         REQUIRE(error);
         CHECK(error == std::make_error_code(expected));
     }
@@ -73,7 +73,7 @@ TEST_CASE("linux unmapped native errors" * doctest::test_suite("linux")) {
         std::unique_ptr<GError, decltype(&g_error_free)> const native{
             g_error_new_literal(G_DBUS_ERROR, G_DBUS_ERROR_SERVICE_UNKNOWN, "Service unavailable"), g_error_free
         };
-        error = osvault::linux_backend::native_error(*native);
+        error = osvault::detail::native_error(*native);
     }
     REQUIRE(error);
     CHECK(error.value() == G_DBUS_ERROR_SERVICE_UNKNOWN);
@@ -81,14 +81,14 @@ TEST_CASE("linux unmapped native errors" * doctest::test_suite("linux")) {
     CHECK(error.message().contains("g-dbus-error-quark"));
 
     GError const other{.domain = G_IO_ERROR, .code = G_IO_ERROR_DBUS_ERROR, .message = nullptr};
-    auto const   distinct = osvault::linux_backend::native_error(other);
+    auto const   distinct = osvault::detail::native_error(other);
     CHECK(distinct.category() != error.category());
 
     GError const again{.domain = G_DBUS_ERROR, .code = G_DBUS_ERROR_SERVICE_UNKNOWN, .message = nullptr};
-    CHECK(osvault::linux_backend::native_error(again) == error);
+    CHECK(osvault::detail::native_error(again) == error);
 }
 
 TEST_CASE("linux unknown domain zero is a failure" * doctest::test_suite("linux")) {
     GError const native{.domain = g_quark_from_static_string("osvault-test-error"), .code = 0, .message = nullptr};
-    CHECK(osvault::linux_backend::native_error(native) == std::errc::io_error);
+    CHECK(osvault::detail::native_error(native) == std::errc::io_error);
 }

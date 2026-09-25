@@ -8,16 +8,7 @@
 #include <system_error>
 #include <utility>
 #include <vector>
-
-#if defined(_WIN32)
-#include "windows/backend.h"
-namespace backend = osvault::windows;
-#elif defined(__linux__)
-#include "linux/backend.h"
-namespace backend = osvault::linux_backend;
-#else
-#error "osvault has no native backend for this platform yet"
-#endif
+#include "backend.h"
 
 namespace osvault {
 
@@ -59,11 +50,13 @@ namespace osvault {
     }
 
     std::size_t vault::max_key_size() const noexcept {
-        return name_.empty() ? 0 : backend::max_key_size(name_);
+        return name_.empty() ? 0 : detail::max_key_size(name_);
     }
 
-    std::size_t vault::max_value_size() const noexcept { // NOLINT
-        return backend::max_value_size();
+    // Keep the public query a member alongside the name-dependent key limit
+    // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    std::size_t vault::max_value_size() const noexcept {
+        return detail::max_value_size();
     }
 
     std::vector<std::byte> vault::read(std::string_view const key) const {
@@ -94,35 +87,35 @@ namespace osvault {
         if (name_.empty() || !valid_name(key)) {
             return std::unexpected{std::make_error_code(std::errc::invalid_argument)};
         }
-        return backend::try_read(name_, key);
+        return detail::try_read(name_, key);
     }
 
     std::error_code vault::try_write(std::string_view const key, std::span<std::byte const> const value) {
         if (name_.empty() || !valid_name(key)) {
             return std::make_error_code(std::errc::invalid_argument);
         }
-        return backend::try_write(name_, key, value);
+        return detail::try_write(name_, key, value);
     }
 
     std::expected<bool, std::error_code> vault::try_erase(std::string_view const key) {
         if (name_.empty() || !valid_name(key)) {
             return std::unexpected{std::make_error_code(std::errc::invalid_argument)};
         }
-        return backend::try_erase(name_, key);
+        return detail::try_erase(name_, key);
     }
 
     std::expected<std::vector<std::string>, std::error_code> vault::try_get_keys() const {
         if (name_.empty()) {
             return std::unexpected{std::make_error_code(std::errc::invalid_argument)};
         }
-        return backend::try_get_keys(name_);
+        return detail::try_get_keys(name_);
     }
 
     std::error_code vault::try_clear() {
         if (name_.empty()) {
             return std::make_error_code(std::errc::invalid_argument);
         }
-        return backend::try_clear(name_);
+        return detail::try_clear(name_);
     }
 
 } // namespace osvault

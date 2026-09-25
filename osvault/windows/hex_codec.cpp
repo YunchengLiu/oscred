@@ -9,7 +9,7 @@
 #include <string_view>
 #include <system_error>
 
-namespace osvault::windows {
+namespace osvault::detail {
 
     std::string encode_hex(std::string_view const input) {
         std::string encoded;
@@ -45,4 +45,4 @@ namespace osvault::windows {
         return decoded;
     }
 
-} // namespace osvault::windows
+} // namespace osvault::detail

@@ -8,7 +8,7 @@
 #include <libsecret/secret.h>
 #include <glib.h>
 
-namespace osvault::linux_backend {
+namespace osvault::detail {
     namespace {
         class error_category final : public std::error_category {
             GQuark domain_;
@@ -68,4 +68,4 @@ namespace osvault::linux_backend {
         auto const&        category   = categories->try_emplace(error.domain, error.domain).first->second;
         return {error.code, category};
     }
-} // namespace osvault::linux_backend
+} // namespace osvault::detail
