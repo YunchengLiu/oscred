@@ -4,13 +4,15 @@ set -euo pipefail
 tools_dir=$(realpath -m "${1:?Pass the preset tools directory}")
 mkdir -p "$tools_dir/bin"
 
+# GCC 15 provides the C++23 container range constructors used by the library.
+sudo add-apt-repository --yes --no-update ppa:ubuntu-toolchain-r/test
 sudo apt-get update
 sudo apt-get install --no-install-recommends -y \
-    build-essential g++-14 pkg-config libsecret-1-dev libglib2.0-dev \
+    build-essential g++-15 pkg-config libsecret-1-dev libglib2.0-dev \
     dbus-daemon dbus-bin gnome-keyring systemd jq
 
-# The preset selects g++; GCC 14 supplies the C++23 library facilities in use.
-ln -s /usr/bin/g++-14 "$tools_dir/bin/g++"
+# Keep the preset's g++ name while selecting the CI toolchain.
+ln -s /usr/bin/g++-15 "$tools_dir/bin/g++"
 
 # Ubuntu 24.04's procps lacks --env, which scopes fixture cleanup to owned
 # processes. Build only pgrep/pkill and keep them local to this CI job.
