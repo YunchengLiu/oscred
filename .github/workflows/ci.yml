@@ -56,26 +56,34 @@ jobs:
                   }
 
     build-and-test:
-        name: ${{ matrix.platform.preset_prefix }}-${{ matrix.configuration }} / ${{ matrix.linkage.name }}
+        name: ${{ matrix.toolchain.preset_prefix }}-${{ matrix.configuration }} / ${{ matrix.linkage.name }}
         needs: lint
-        runs-on: ${{ matrix.platform.runner }}
+        runs-on: ${{ matrix.toolchain.runner }}
         timeout-minutes: 20
         strategy:
             fail-fast: false
             max-parallel: 4
             matrix:
-                platform:
+                toolchain:
                     - {runner: windows-2022, preset_prefix: win-msvc}
+                    - {runner: windows-2022, preset_prefix: win-clangcl}
                     - {runner: ubuntu-24.04, preset_prefix: linux-gcc}
-                configuration: [dbg, rel, reldbg, minrel]
+                configuration: [dbg, rel]
                 linkage:
                     - {name: static, shared: 'OFF'}
                     - {name: shared, shared: 'ON'}
+                include:
+                    - toolchain: {runner: windows-2022, preset_prefix: win-msvc}
+                      configuration: sanitize
+                      linkage: {name: static, shared: 'OFF'}
+                    - toolchain: {runner: ubuntu-24.04, preset_prefix: linux-gcc}
+                      configuration: sanitize
+                      linkage: {name: static, shared: 'OFF'}
         defaults:
             run:
                 shell: bash
         env:
-            PRESET: ${{ matrix.platform.preset_prefix }}-${{ matrix.configuration }}
+            PRESET: ${{ matrix.toolchain.preset_prefix }}-${{ matrix.configuration }}
             BUILD_SHARED_LIBS: ${{ matrix.linkage.shared }}
             CMAKE_BUILD_PARALLEL_LEVEL: 2
 
@@ -84,7 +92,7 @@ jobs:
               with:
                   persist-credentials: false
 
-            - name: Set up MSVC
+            - name: Set up Visual Studio environment
               if: runner.os == 'Windows'
               uses: ilammy/msvc-dev-cmd@v1.13.0
               with:
@@ -102,7 +110,7 @@ jobs:
 
             - name: Test
               # CTest fixtures own native setup and cleanup, including test failures.
-              run: ctest --preset "$PRESET" --no-tests=error --timeout 120
+              run: ctest --preset "$PRESET"
 
             - name: Upload failure logs
               if: failure()

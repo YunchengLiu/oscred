@@ -5,9 +5,271 @@
         "minor": 28,
         "patch": 0
     },
-    "include": [
-        "cmake/presets/windows.json",
-        "cmake/presets/linux.json",
-        "cmake/presets/macos.json"
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}/cache",
+            "cacheVariables": {
+                "CMAKE_CXX_STANDARD": "23",
+                "CMAKE_CXX_STANDARD_REQUIRED": true,
+                "CMAKE_CXX_EXTENSIONS": false,
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+                "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/bin",
+                "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib",
+                "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/build/${presetName}/install"
+            }
+        },
+        {
+            "name": "win-clangcl",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang-cl.exe",
+                "CMAKE_RC_COMPILER": "llvm-rc",
+                "CMAKE_MT": "llvm-mt"
+            }
+        },
+        {
+            "name": "win-clangcl-dbg",
+            "inherits": "win-clangcl",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "win-clangcl-rel",
+            "inherits": "win-clangcl",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "win-msvc",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "cl.exe"
+            }
+        },
+        {
+            "name": "win-msvc-dbg",
+            "inherits": "win-msvc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "win-msvc-rel",
+            "inherits": "win-msvc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "win-msvc-sanitize",
+            "inherits": "win-msvc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "BUILD_SHARED_LIBS": false,
+                "CMAKE_TRY_COMPILE_CONFIGURATION": "RelWithDebInfo",
+                "CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO": "/debug /INCREMENTAL:NO"
+            },
+            "environment": {
+                "CXXFLAGS": "/fsanitize=address"
+            }
+        },
+        {
+            "name": "linux-gcc",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "linux-gcc-dbg",
+            "inherits": "linux-gcc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux-gcc-rel",
+            "inherits": "linux-gcc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux-gcc-sanitize",
+            "inherits": "linux-gcc",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "BUILD_SHARED_LIBS": false
+            },
+            "environment": {
+                "CXXFLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+                "UBSAN_OPTIONS": "print_stacktrace=1"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "win",
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "win-clangcl-dbg",
+            "configurePreset": "win-clangcl-dbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-clangcl-rel",
+            "configurePreset": "win-clangcl-rel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-dbg",
+            "configurePreset": "win-msvc-dbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-rel",
+            "configurePreset": "win-msvc-rel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-sanitize",
+            "configurePreset": "win-msvc-sanitize",
+            "inherits": "win"
+        },
+        {
+            "name": "linux",
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "linux-gcc-dbg",
+            "configurePreset": "linux-gcc-dbg",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-rel",
+            "configurePreset": "linux-gcc-rel",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-sanitize",
+            "configurePreset": "linux-gcc-sanitize",
+            "inherits": "linux"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error",
+                "timeout": 120
+            }
+        },
+        {
+            "name": "win",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "win-clangcl-dbg",
+            "configurePreset": "win-clangcl-dbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-clangcl-rel",
+            "configurePreset": "win-clangcl-rel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-dbg",
+            "configurePreset": "win-msvc-dbg",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-rel",
+            "configurePreset": "win-msvc-rel",
+            "inherits": "win"
+        },
+        {
+            "name": "win-msvc-sanitize",
+            "configurePreset": "win-msvc-sanitize",
+            "inherits": "win"
+        },
+        {
+            "name": "linux",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            }
+        },
+        {
+            "name": "linux-gcc-dbg",
+            "configurePreset": "linux-gcc-dbg",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-rel",
+            "configurePreset": "linux-gcc-rel",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-gcc-sanitize",
+            "configurePreset": "linux-gcc-sanitize",
+            "inherits": "linux"
+        }
     ]
 }
