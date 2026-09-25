@@ -54,6 +54,18 @@ if (auto const result = storage.try_read("token"); result) {
 }
 ```
 
+### Vault management
+
+Enumerate names with stored entries, or clear a vault by name. An empty vault
+does not appear in the results. Both functions also have `try_` counterparts.
+
+```cpp
+for (auto const& name : osvault::enumerate()) {
+    std::println("Vault: {}", name);
+}
+osvault::clear("osvault-example"); // Removes all entries in this vault
+```
+
 ### Concurrency
 
 Operations are synchronous. Callers must serialize storage access within the

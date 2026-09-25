@@ -9,6 +9,8 @@
 
 namespace osvault::detail {
 
+    [[nodiscard]] std::expected<std::vector<std::string>, std::error_code> try_enumerate();
+
     [[nodiscard]] std::size_t max_key_size(std::string_view group) noexcept;
 
     [[nodiscard]] std::size_t max_value_size() noexcept;

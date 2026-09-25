@@ -238,7 +238,8 @@ namespace {
             return 1;
         }
         if (storage.try_write("missing", {}) != error || storage.try_erase("missing") != std::unexpected{error} ||
-            storage.try_get_keys() != std::unexpected{error} || storage.try_clear() != error) {
+            storage.try_get_keys() != std::unexpected{error} || storage.try_clear() != error ||
+            osvault::try_enumerate() != std::unexpected{error} || osvault::try_clear(storage.name()) != error) {
             return 1;
         }
 #ifdef OSVAULT_STATIC
@@ -282,7 +283,8 @@ namespace {
         return same_error([&] { (void)storage.read("missing"); }) &&
                 same_error([&] { storage.write("missing", {}); }) &&
                 same_error([&] { (void)storage.erase("missing"); }) && same_error([&] { (void)storage.get_keys(); }) &&
-                same_error([&] { storage.clear(); })
+                same_error([&] { storage.clear(); }) && same_error([] { (void)osvault::enumerate(); }) &&
+                same_error([&] { osvault::clear(storage.name()); })
             ? 0
             : 1;
     }
@@ -488,14 +490,17 @@ TEST_CASE_FIXTURE(vault_fixture, "vault collection isolation" * doctest::test_su
     REQUIRE_FALSE(missing);
     CHECK(missing.error() == std::make_error_code(std::errc::no_such_file_or_directory));
     CHECK(storage.get_keys().empty());
+    CHECK_FALSE(std::ranges::contains(osvault::enumerate(), storage.name()));
     CHECK_FALSE(storage.erase("other-only"));
     storage.clear();
+    osvault::clear(storage.name());
     check_neighbor();
 
     std::vector const value{std::byte{0x11}, std::byte{0}, std::byte{0x80}};
     storage.write("shared", value);
     CHECK(storage.read("shared") == value);
     CHECK(storage.get_keys() == std::vector{"shared"s});
+    CHECK(std::ranges::contains(osvault::enumerate(), storage.name()));
     check_record(storage, "shared", value);
     check_neighbor();
 
@@ -506,6 +511,7 @@ TEST_CASE_FIXTURE(vault_fixture, "vault collection isolation" * doctest::test_su
     storage.write("shared", value);
     storage.clear();
     CHECK(storage.get_keys().empty());
+    CHECK_FALSE(std::ranges::contains(osvault::enumerate(), storage.name()));
     check_absent(storage, "shared");
     check_neighbor();
 }
@@ -560,8 +566,10 @@ TEST_CASE_FIXTURE(vault_fixture, "vault record filtering" * doctest::test_suite(
         REQUIRE(item);
     }
     CHECK(storage.get_keys() == std::vector{"valid"s});
-    storage.clear();
+    CHECK(std::ranges::count(osvault::enumerate(), storage.name()) == 1);
+    osvault::clear(storage.name());
     CHECK(storage.get_keys().empty());
+    CHECK_FALSE(std::ranges::contains(osvault::enumerate(), storage.name()));
     check_absent(storage, "valid");
     auto const [verify_service, verify_store] = collection();
     auto const remaining                      = enumerate(verify_store.get());
@@ -572,4 +580,77 @@ TEST_CASE_FIXTURE(vault_fixture, "vault record filtering" * doctest::test_suite(
         }
     }
     CHECK(count == 3);
+}
+
+TEST_CASE_FIXTURE(vault_fixture, "vault enumeration" * doctest::test_suite("native")) {
+    osvault::vault const empty{group("empty")};
+    auto                 expected = osvault::enumerate();
+    CHECK_FALSE(std::ranges::contains(expected, empty.name()));
+    for (auto const suffix : {"A"sv, "a"sv, "A/密钥*"sv}) {
+        osvault::vault storage{group(suffix)};
+        storage.write("first", {});
+        storage.write("second", {});
+        expected.emplace_back(storage.name());
+    }
+    CHECK(std::ranges::is_permutation(osvault::enumerate(), expected));
+    auto const names = osvault::try_enumerate();
+    REQUIRE(names);
+    CHECK(std::ranges::is_permutation(*names, expected));
+
+    osvault::vault storage{group("A")};
+    REQUIRE(storage.erase("first"));
+    CHECK(std::ranges::contains(osvault::enumerate(), storage.name()));
+    REQUIRE(storage.erase("second"));
+    CHECK_FALSE(std::ranges::contains(osvault::enumerate(), storage.name()));
+}
+
+TEST_CASE_FIXTURE(vault_fixture, "clear by name" * doctest::test_suite("native")) {
+    osvault::vault storage{group()};
+    osvault::vault neighbor{group("child")};
+    auto const     input = group("suffix");
+    auto const     name  = std::string_view{input}.substr(0, storage.name().size());
+    storage.write("first", {});
+    storage.write("second", {});
+    neighbor.write("first", {});
+    osvault::clear(name);
+    CHECK(storage.get_keys().empty());
+    check_absent(storage, "first");
+    check_absent(storage, "second");
+    CHECK_FALSE(std::ranges::contains(osvault::enumerate(), name));
+    check_record(neighbor, "first", {});
+
+    storage.write("first", {});
+    REQUIRE_FALSE(osvault::try_clear(name));
+    check_absent(storage, "first");
+    CHECK_FALSE(osvault::try_clear(name));
+    osvault::clear(name);
+    check_record(neighbor, "first", {});
+}
+
+TEST_CASE_FIXTURE(vault_fixture, "vault name filtering" * doctest::test_suite("native")) {
+    auto const before           = osvault::enumerate();
+    auto const [service, store] = collection();
+    // Missing and empty groups are confined to CTest's disposable collection
+    for (auto const* const name : {static_cast<char const*>(nullptr), ""}) {
+        attributes_ptr const fields{g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free), g_hash_table_unref};
+        g_hash_table_insert(fields.get(), g_strdup("xdg:schema"), g_strdup("osvlt"));
+        g_hash_table_insert(fields.get(), g_strdup("key"), g_strdup("valid"));
+        if (name) {
+            g_hash_table_insert(fields.get(), g_strdup("group"), g_strdup(name));
+        }
+        error_ptr                                                         error{nullptr, g_error_free};
+        std::unique_ptr<SecretValue, decltype(&secret_value_unref)> const value{
+            secret_value_new("", 0, "application/octet-stream"), secret_value_unref
+        };
+        object_ptr<SecretItem> const item{
+            secret_item_create_sync(
+                store.get(), nullptr, fields.get(), "osvault test", value.get(), SECRET_ITEM_CREATE_NONE, nullptr,
+                std::out_ptr(error)
+            ),
+            g_object_unref
+        };
+        REQUIRE(item);
+        CHECK(std::ranges::is_permutation(osvault::enumerate(), before));
+        REQUIRE(secret_item_delete_sync(item.get(), nullptr, std::out_ptr(error)));
+    }
 }

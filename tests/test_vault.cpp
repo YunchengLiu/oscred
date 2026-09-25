@@ -32,6 +32,15 @@ TEST_CASE("vault invalid names" * doctest::test_suite("vault")) {
     }
 }
 
+TEST_CASE("clear invalid names" * doctest::test_suite("vault")) {
+    auto const error = std::make_error_code(std::errc::invalid_argument);
+    for (auto const name : {""sv, "\0x"sv, "x\0y"sv, "x\0"sv}) {
+        CAPTURE(name);
+        CHECK(osvault::try_clear(name) == error);
+        expect_throw_with_code([&] { osvault::clear(name); }, error);
+    }
+}
+
 TEST_CASE("vault invalid keys" * doctest::test_suite("vault")) {
     osvault::vault storage;
     auto const     error = std::make_error_code(std::errc::invalid_argument);

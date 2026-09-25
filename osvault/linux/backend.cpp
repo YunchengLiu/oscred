@@ -117,11 +117,13 @@ namespace osvault::detail {
         }();
 
         [[nodiscard]] attrs_ptr
-        attributes(std::string_view const group, std::optional<std::string_view> const key) noexcept {
-            assert(!group.empty() && !group.contains('\0'));
+        attributes(std::optional<std::string_view> const group, std::optional<std::string_view> const key) noexcept {
             attrs_ptr result{g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free), g_hash_table_unref};
             // Copy bounded views directly into GLib-owned, null-terminated attribute values
-            g_hash_table_insert(result.get(), g_strdup("group"), g_strndup(group.data(), group.size()));
+            if (group) {
+                assert(!group->empty() && !group->contains('\0'));
+                g_hash_table_insert(result.get(), g_strdup("group"), g_strndup(group->data(), group->size()));
+            }
             if (key) {
                 assert(!key->empty() && !key->contains('\0'));
                 g_hash_table_insert(result.get(), g_strdup("key"), g_strndup(key->data(), key->size()));
@@ -145,7 +147,7 @@ namespace osvault::detail {
         }
 
         [[nodiscard]] std::string_view owned_key(GHashTable* const fields) noexcept {
-            // The search owns schema/group matching; records created outside the library may omit a valid key
+            // Records created outside the library may omit a valid key
             // The returned view borrows the caller's attribute table; an empty view is not an owned key
             auto const* const key = static_cast<char const*>(g_hash_table_lookup(fields, "key"));
             return key != nullptr ? std::string_view{key} : std::string_view{};
@@ -162,6 +164,27 @@ namespace osvault::detail {
             return {};
         }
     } // namespace
+
+    std::expected<std::vector<std::string>, std::error_code> try_enumerate() {
+        auto const context = connect();
+        if (!context) {
+            return std::unexpected{context.error()};
+        }
+        auto const fields = attributes(std::nullopt, std::nullopt);
+        auto const found  = search(context->collection.get(), fields.get());
+        if (!found) {
+            return std::unexpected{found.error()};
+        }
+        std::vector<std::string> names;
+        for (auto const* entry = found->get(); entry != nullptr; entry = entry->next) {
+            attrs_ptr const   fields{secret_item_get_attributes(SECRET_ITEM(entry->data)), g_hash_table_unref};
+            auto const* const group = static_cast<char const*>(g_hash_table_lookup(fields.get(), "group"));
+            if (group != nullptr && *group != '\0' && !owned_key(fields.get()).empty()) {
+                names.emplace_back(group);
+            }
+        }
+        return names;
+    }
 
     std::size_t max_key_size([[maybe_unused]] std::string_view const group) noexcept {
         assert(!group.empty() && !group.contains('\0'));

@@ -325,6 +325,66 @@ TEST_CASE_FIXTURE(vault_fixture, "vault clear isolation" * doctest::test_suite("
     check_record(neighbor, "first", {});
 }
 
+TEST_CASE_FIXTURE(vault_fixture, "vault enumeration" * doctest::test_suite("native")) {
+    osvault::vault const empty{group("empty")};
+    auto                 expected = osvault::enumerate();
+    CHECK_FALSE(std::ranges::contains(expected, empty.name()));
+    for (auto const suffix : {"A"sv, "a"sv, "A/密钥*"sv}) {
+        osvault::vault storage{group(suffix)};
+        storage.write("first", {});
+        storage.write("second", {});
+        expected.emplace_back(storage.name());
+    }
+    CHECK(std::ranges::is_permutation(osvault::enumerate(), expected));
+    auto const names = osvault::try_enumerate();
+    REQUIRE(names);
+    CHECK(std::ranges::is_permutation(*names, expected));
+
+    osvault::vault storage{group("A")};
+    REQUIRE(storage.erase("first"));
+    CHECK(std::ranges::contains(osvault::enumerate(), storage.name()));
+    REQUIRE(storage.erase("second"));
+    CHECK_FALSE(std::ranges::contains(osvault::enumerate(), storage.name()));
+}
+
+TEST_CASE_FIXTURE(vault_fixture, "clear by name" * doctest::test_suite("native")) {
+    osvault::vault storage{group()};
+    osvault::vault neighbor{group("child")};
+    auto const     input = group("suffix");
+    auto const     name  = std::string_view{input}.substr(0, storage.name().size());
+    storage.write("first", {});
+    storage.write("second", {});
+    neighbor.write("first", {});
+    osvault::clear(name);
+    CHECK(storage.get_keys().empty());
+    check_absent(storage, "first");
+    check_absent(storage, "second");
+    CHECK_FALSE(std::ranges::contains(osvault::enumerate(), name));
+    check_record(neighbor, "first", {});
+
+    storage.write("first", {});
+    REQUIRE_FALSE(osvault::try_clear(name));
+    check_absent(storage, "first");
+    CHECK_FALSE(osvault::try_clear(name));
+    osvault::clear(name);
+    check_record(neighbor, "first", {});
+}
+
+TEST_CASE_FIXTURE(vault_fixture, "vault name filtering" * doctest::test_suite("native")) {
+    auto const         before = osvault::enumerate();
+    auto const         text   = std::format("osvlt/{}", osvault::detail::encode_hex(group()));
+    std::wstring const prefix{text.begin(), text.end()};
+    for (auto const suffix : {L"", L"/", L"0/6B", L"GG/6B", L"00/6B", L"410042/6B", L"\u0141/6B"}) {
+        auto        target = prefix + suffix;
+        CREDENTIALW credential{};
+        credential.Type       = CRED_TYPE_GENERIC;
+        credential.TargetName = target.data();
+        credential.Persist    = CRED_PERSIST_LOCAL_MACHINE;
+        REQUIRE(CredWriteW(&credential, 0));
+    }
+    CHECK(std::ranges::is_permutation(osvault::enumerate(), before));
+}
+
 TEST_CASE_FIXTURE(vault_fixture, "vault record filtering" * doctest::test_suite("native")) {
     osvault::vault     storage{group()};
     auto const         text = std::format("osvlt/{}/", osvault::detail::encode_hex(storage.name()));
@@ -351,9 +411,11 @@ TEST_CASE_FIXTURE(vault_fixture, "vault record filtering" * doctest::test_suite(
     auto keys = storage.get_keys();
     std::ranges::sort(keys);
     CHECK(keys == std::vector{"valid"s, "密钥"s});
+    CHECK(std::ranges::count(osvault::enumerate(), storage.name()) == 1);
 
-    REQUIRE_FALSE(storage.try_clear());
+    REQUIRE_FALSE(osvault::try_clear(storage.name()));
     CHECK(storage.get_keys().empty());
+    CHECK_FALSE(std::ranges::contains(osvault::enumerate(), storage.name()));
     for (auto const& untouched : foreign) {
         std::unique_ptr<CREDENTIALW, decltype(&CredFree)> record{nullptr, &CredFree};
         auto const found = CredReadW(untouched.c_str(), CRED_TYPE_GENERIC, 0, std::out_ptr(record));
@@ -388,8 +450,10 @@ TEST_CASE_FIXTURE(vault_fixture, "vault group limit" * doctest::test_suite("nati
     CHECK(oversized.try_erase("x") == std::unexpected{error});
     CHECK(oversized.try_get_keys() == std::unexpected{error});
     CHECK(oversized.try_clear() == error);
+    CHECK(osvault::try_clear(oversized.name()) == error);
     expect_throw_with_code([&] { return oversized.get_keys(); }, error);
     expect_throw_with_code([&] { return oversized.clear(); }, error);
+    expect_throw_with_code([&] { osvault::clear(oversized.name()); }, error);
 }
 
 TEST_CASE("vault fixture unwinding" * doctest::test_suite("native")) {

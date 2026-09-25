@@ -117,4 +117,29 @@ namespace osvault {
         [[nodiscard]] OSVAULT_EXPORT std::error_code try_clear();
     };
 
+    /// @brief List names of vaults that contain entries
+    ///
+    /// @details Uses the same storage scope, interaction policy and serialization requirements as vault
+    /// Constructing a vault alone does not make its name appear in the result
+    /// @return Distinct names of vaults containing valid osvault records, in unspecified order
+    /// @exception std::system_error The operation fails
+    [[nodiscard]] OSVAULT_EXPORT std::vector<std::string> enumerate();
+
+    /// @copybrief enumerate
+    /// @details Reports operation errors but may still throw on allocation failure
+    [[nodiscard]] OSVAULT_EXPORT std::expected<std::vector<std::string>, std::error_code> try_enumerate();
+
+    /// @brief Remove all entries from the named vault
+    ///
+    /// @details Uses the same storage scope, interaction policy and serialization requirements as vault
+    /// An absent vault needs no cleanup; a failure may leave some entries already removed
+    /// @param name A nonempty vault name without null bytes
+    /// @exception std::system_error The name is invalid or the operation fails
+    OSVAULT_EXPORT void clear(std::string_view name);
+
+    /// @copybrief clear
+    /// @details Reports operation errors but may still throw on allocation failure
+    /// A failure may leave some entries already removed; cleanup can be retried with the same name
+    [[nodiscard]] OSVAULT_EXPORT std::error_code try_clear(std::string_view name);
+
 } // namespace osvault

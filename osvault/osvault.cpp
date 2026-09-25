@@ -1,4 +1,5 @@
 #include "osvault.h"
+#include <algorithm>
 #include <cstddef>
 #include <expected>
 #include <span>
@@ -78,9 +79,7 @@ namespace osvault {
     }
 
     void vault::clear() {
-        if (auto const error = try_clear()) {
-            throw std::system_error{error, "clear vault"};
-        }
+        osvault::clear(name_);
     }
 
     std::expected<std::vector<std::byte>, std::error_code> vault::try_read(std::string_view const key) const {
@@ -112,10 +111,34 @@ namespace osvault {
     }
 
     std::error_code vault::try_clear() {
-        if (name_.empty()) {
+        return osvault::try_clear(name_);
+    }
+
+    std::vector<std::string> enumerate() {
+        return value_or_throw(try_enumerate(), "enumerate vaults");
+    }
+
+    std::expected<std::vector<std::string>, std::error_code> try_enumerate() {
+        auto result = detail::try_enumerate();
+        if (result) {
+            std::ranges::sort(*result);
+            auto const duplicates = std::ranges::unique(*result);
+            result->erase(duplicates.begin(), duplicates.end());
+        }
+        return result;
+    }
+
+    void clear(std::string_view const name) {
+        if (auto const error = try_clear(name)) {
+            throw std::system_error{error, "clear vault"};
+        }
+    }
+
+    std::error_code try_clear(std::string_view const name) {
+        if (!valid_name(name)) {
             return std::make_error_code(std::errc::invalid_argument);
         }
-        return detail::try_clear(name_);
+        return detail::try_clear(name);
     }
 
 } // namespace osvault

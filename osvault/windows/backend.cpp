@@ -65,6 +65,20 @@ namespace osvault::detail {
             return result;
         }
 
+        [[nodiscard]] std::optional<std::string> decode_name(std::wstring_view const encoded) {
+            if (!std::ranges::all_of(encoded, [](wchar_t const ch) noexcept { return ch <= 0x7F; })) {
+                return std::nullopt;
+            }
+            auto const narrow =
+                encoded | std::views::transform([](wchar_t const ch) noexcept { return static_cast<char>(ch); });
+            auto name = decode_hex(std::ranges::to<std::string>(narrow));
+            // Native records bypass public validation; names and keys must be nonempty and contain no null bytes
+            if (!name || name->empty() || name->contains('\0')) {
+                return std::nullopt;
+            }
+            return name;
+        }
+
         [[nodiscard]] std::optional<std::string> owned_key(CREDENTIALW const& record, std::wstring_view const prefix) {
             if (record.Type != CRED_TYPE_GENERIC) {
                 return std::nullopt;
@@ -79,21 +93,31 @@ namespace osvault::detail {
                     target.data(), static_cast<int>(prefix.size()), prefix.data(), static_cast<int>(prefix.size()), TRUE
                 ) == CSTR_EQUAL
             );
-            auto const suffix = target.substr(prefix.size());
-            if (!std::ranges::all_of(suffix, [](wchar_t const ch) noexcept { return ch <= 0x7F; })) {
-                return std::nullopt;
-            }
-            auto const narrow =
-                suffix | std::views::transform([](wchar_t const ch) noexcept { return static_cast<char>(ch); });
-            auto key = decode_hex(std::ranges::to<std::string>(narrow));
-            // stored records may bypass vault's input validation; only valid decoded keys belong to this format
-            if (!key || key->empty() || key->contains('\0')) {
-                return std::nullopt;
-            }
-            return key;
+            return decode_name(target.substr(prefix.size()));
         }
 
     } // namespace
+
+    std::expected<std::vector<std::string>, std::error_code> try_enumerate() {
+        std::wstring const marker{L"osvlt/"};
+        auto const         records = enumerate(marker);
+        if (!records) {
+            return std::unexpected{records.error()};
+        }
+        std::vector<std::string> names;
+        for (auto const* record : std::span{records->entries.get(), records->count}) {
+            std::wstring_view const target{record->TargetName};
+            auto const              separator = target.find(L'/', marker.size());
+            if (separator == std::wstring_view::npos) {
+                continue;
+            }
+            auto name = decode_name(target.substr(marker.size(), separator - marker.size()));
+            if (name && owned_key(*record, target.substr(0, separator + 1))) {
+                names.push_back(std::move(*name));
+            }
+        }
+        return names;
+    }
 
     std::size_t max_key_size(std::string_view const group) noexcept {
         assert(!group.empty() && !group.contains('\0'));
