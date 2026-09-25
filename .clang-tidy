@@ -45,10 +45,17 @@ HeaderFileExtensions: [h]
 ImplementationFileExtensions: [cpp]
 SystemHeaders: false
 CheckOptions:
+    # Win32 uses Windows.h as an umbrella; keep include checks for project and standard headers
+    misc-include-cleaner.IgnoreHeaders: '[/\\]Windows Kits[/\\].*[/\\](um|shared)[/\\].*'
     cppcoreguidelines-macro-usage.AllowedRegexp: '^OSVAULT_.*'
     readability-function-cognitive-complexity.IgnoreMacros: true
     readability-identifier-naming.NamespaceCase: lower_case
-    readability-identifier-naming.TypeCase: lower_case
+    readability-identifier-naming.ClassCase: lower_case
+    readability-identifier-naming.StructCase: lower_case
+    readability-identifier-naming.UnionCase: lower_case
+    readability-identifier-naming.EnumCase: lower_case
+    readability-identifier-naming.TypeAliasCase: lower_case
+    readability-identifier-naming.TypedefCase: lower_case
     readability-identifier-naming.FunctionCase: lower_case
     readability-identifier-naming.VariableCase: lower_case
     readability-identifier-naming.ParameterCase: lower_case
