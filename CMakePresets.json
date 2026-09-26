@@ -137,6 +137,42 @@
                 "CXXFLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
                 "UBSAN_OPTIONS": "print_stacktrace=1"
             }
+        },
+        {
+            "name": "macos",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "macos-dbg",
+            "inherits": "macos",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "macos-rel",
+            "inherits": "macos",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "macos-sanitize",
+            "inherits": "macos",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "BUILD_SHARED_LIBS": false
+            },
+            "environment": {
+                "CXXFLAGS": "-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+                "UBSAN_OPTIONS": "print_stacktrace=1"
+            }
         }
     ],
     "buildPresets": [
@@ -197,6 +233,30 @@
             "name": "linux-gcc-sanitize",
             "configurePreset": "linux-gcc-sanitize",
             "inherits": "linux"
+        },
+        {
+            "name": "macos",
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            }
+        },
+        {
+            "name": "macos-dbg",
+            "configurePreset": "macos-dbg",
+            "inherits": "macos"
+        },
+        {
+            "name": "macos-rel",
+            "configurePreset": "macos-rel",
+            "inherits": "macos"
+        },
+        {
+            "name": "macos-sanitize",
+            "configurePreset": "macos-sanitize",
+            "inherits": "macos"
         }
     ],
     "testPresets": [
@@ -270,6 +330,31 @@
             "name": "linux-gcc-sanitize",
             "configurePreset": "linux-gcc-sanitize",
             "inherits": "linux"
+        },
+        {
+            "name": "macos",
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Darwin"
+            },
+            "inherits": "base"
+        },
+        {
+            "name": "macos-dbg",
+            "configurePreset": "macos-dbg",
+            "inherits": "macos"
+        },
+        {
+            "name": "macos-rel",
+            "configurePreset": "macos-rel",
+            "inherits": "macos"
+        },
+        {
+            "name": "macos-sanitize",
+            "configurePreset": "macos-sanitize",
+            "inherits": "macos"
         }
     ]
 }

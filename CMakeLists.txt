@@ -46,6 +46,9 @@ endif()
 
 if(WIN32)
     set(backend windows)
+elseif(APPLE)
+    set(backend macos)
+    target_link_libraries(osvault PRIVATE "$<LINK_LIBRARY:FRAMEWORK,Security,CoreFoundation>")
 elseif(LINUX)
     set(backend linux)
     find_package(PkgConfig REQUIRED)
@@ -58,7 +61,8 @@ elseif(LINUX)
     endif()
 else()
     message(
-        FATAL_ERROR "osvault has no native backend for ${CMAKE_SYSTEM_NAME}; available targets are Windows and Linux"
+        FATAL_ERROR
+            "osvault has no native backend for ${CMAKE_SYSTEM_NAME}; available targets are Windows, macOS and Linux"
     )
 endif()
 

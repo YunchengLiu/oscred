@@ -29,11 +29,13 @@ namespace osvault {
     /// Storage operations are synchronous and do not display authorization or unlock prompts
     /// An operation that requires interaction reports an error
     /// Linux requires an existing, unlocked default Secret Service collection
+    /// macOS uses the existing default file-based Keychain; access depends on its lock state and item ACLs
     ///
     /// Moved-from objects have an empty name and reject storage operations with std::errc::invalid_argument
     /// The try_ operations report operation errors but may still throw on allocation failure
     /// @pre Callers must serialize storage operations within the same user storage context across objects,
     /// threads, and processes; unsynchronized concurrent access has undefined behavior
+    /// On macOS, also coordinate direct Keychain calls that use the process-wide interaction policy
     class vault {
         std::string name_;
 

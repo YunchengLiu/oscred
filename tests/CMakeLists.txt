@@ -33,13 +33,18 @@ doctest_discover_tests(
     ADD_LABELS 1
 )
 
-add_test(NAME vault.persistence.write COMMAND osvault-tests --write-test)
-add_test(NAME vault.persistence.read COMMAND osvault-tests --read-test)
-set_tests_properties(vault.persistence.write PROPERTIES FIXTURES_SETUP persistence FIXTURES_REQUIRED credentials)
-set_tests_properties(vault.persistence.read PROPERTIES FIXTURES_REQUIRED "credentials;persistence")
+if(NOT APPLE)
+    add_test(NAME vault.persistence.write COMMAND osvault-tests --write-test)
+    add_test(NAME vault.persistence.read COMMAND osvault-tests --read-test)
+endif()
 
 if(WIN32)
     include(windows/backend-win.cmake)
 elseif(LINUX)
     include(linux/backend-linux.cmake)
+elseif(APPLE)
+    include(macos/backend-macos.cmake)
 endif()
+
+set_tests_properties(vault.persistence.write PROPERTIES FIXTURES_SETUP persistence FIXTURES_REQUIRED credentials)
+set_tests_properties(vault.persistence.read PROPERTIES FIXTURES_REQUIRED "credentials;persistence")
