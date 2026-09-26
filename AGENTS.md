@@ -2,14 +2,12 @@
 
 ## Working Principles
 
-- Understand the required outcome, existing code, constraints, and acceptance
-  criteria before changing anything. Apply first-principles reasoning.
-- Choose the smallest complete solution. Compare additions with removal, reuse, or a
-  simpler alternative; preserve correctness, useful evidence, and project rules.
-- Follow settled requirements. Clarify material uncertainties before
-  implementation and decide local mechanics autonomously. Report scope
-  expansion and preserve unrelated behavior and user changes. Treat tentative
-  designs as proposals.
+- Understand the required behavior, existing code, and platform constraints
+  before editing.
+- Choose the smallest complete solution. Reuse existing facilities and add
+  abstractions only for concrete needs.
+- Keep changes focused, preserve unrelated behavior and user changes, and
+  clarify material uncertainties before implementation.
 
 ## Project Scope
 
@@ -34,14 +32,9 @@ capabilities and limits explicit.
 
 ## Engineering
 
-Use `cpp-project-engineering` and its task-relevant references when available;
-read the applicable rules before editing and check compliance before delivery.
-Use `first-principles`, `planning-clarification`, `modern-cpp`, and `modern-cmake`
-as needed. Repository-specific requirements take precedence. If a skill is
-unavailable, state the limitation and follow repository rules and configuration.
-
-- Follow declared standards, dependencies, formatting, and lint configuration.
-  Change them only when required by the task.
+- Prefer modern C++ and standard-library facilities that make the code clearer.
+  Follow declared standards, dependencies, formatting, and lint configuration;
+  change them only when required by the task. Preserve the surrounding style.
 - Keep ownership, lifetimes, supported inputs, and failure behavior explicit.
   Establish guarantees at their owning boundaries and rely on them downstream.
   Update affected interfaces, callers, documentation, tests, and build wiring
@@ -69,7 +62,8 @@ unavailable, state the limitation and follow repository rules and configuration.
   failures, or unresolved questions. Do not weaken checks or change
   configurations merely to obtain a pass.
 - Review the diff for necessity, rule compliance, and affected behavior. Report
-  changes, actual validation, and remaining gaps concisely. Commit or push only
-  when requested.
+  changes, actual validation, and remaining gaps concisely.
+- Merge changes into `main` through pull requests. Commit, push, merge, or
+  publish only when explicitly requested.
 - Format commit messages as `subject: message`, with no space before the colon
   and one space after it. Keep the message neutral, factual, and clear.
