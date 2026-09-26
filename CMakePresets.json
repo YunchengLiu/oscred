@@ -139,6 +139,49 @@
             }
         },
         {
+            "name": "linux-clang",
+            "hidden": true,
+            "inherits": "base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Linux"
+            },
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang++"
+            },
+            "environment": {
+                "CXXFLAGS": "-stdlib=libc++",
+                "LDFLAGS": "-fuse-ld=lld --rtlib=compiler-rt --unwindlib=libunwind"
+            }
+        },
+        {
+            "name": "linux-clang-dbg",
+            "inherits": "linux-clang",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux-clang-rel",
+            "inherits": "linux-clang",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux-clang-sanitize",
+            "inherits": "linux-clang",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "BUILD_SHARED_LIBS": false
+            },
+            "environment": {
+                "CXXFLAGS": "-stdlib=libc++ -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer",
+                "UBSAN_OPTIONS": "print_stacktrace=1"
+            }
+        },
+        {
             "name": "macos",
             "hidden": true,
             "inherits": "base",
@@ -232,6 +275,21 @@
         {
             "name": "linux-gcc-sanitize",
             "configurePreset": "linux-gcc-sanitize",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-clang-dbg",
+            "configurePreset": "linux-clang-dbg",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-clang-rel",
+            "configurePreset": "linux-clang-rel",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-clang-sanitize",
+            "configurePreset": "linux-clang-sanitize",
             "inherits": "linux"
         },
         {
@@ -329,6 +387,21 @@
         {
             "name": "linux-gcc-sanitize",
             "configurePreset": "linux-gcc-sanitize",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-clang-dbg",
+            "configurePreset": "linux-clang-dbg",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-clang-rel",
+            "configurePreset": "linux-clang-rel",
+            "inherits": "linux"
+        },
+        {
+            "name": "linux-clang-sanitize",
+            "configurePreset": "linux-clang-sanitize",
             "inherits": "linux"
         },
         {

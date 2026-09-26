@@ -16,7 +16,7 @@ concurrency:
 jobs:
     lint:
         name: Lint
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-26.04
         timeout-minutes: 10
         defaults:
             run:
@@ -35,7 +35,7 @@ jobs:
             - name: Check C++ formatting
               run: |
                   git ls-files -z '*.cpp' '*.h' |
-                      xargs -0 pipx run --spec 'clang-format==22.*' clang-format --dry-run --Werror
+                      xargs -0 clang-format-22 --dry-run --Werror
 
             - name: Check CMake formatting
               run: |
@@ -43,7 +43,7 @@ jobs:
                       xargs -0 pipx run --spec cmakelang==0.6.13 cmake-format --check
 
             - name: Check Bash scripts
-              run: shellcheck --external-sources --source-path=SCRIPTDIR tests/linux/*.sh .github/scripts/*.sh
+              run: shellcheck --external-sources --source-path=SCRIPTDIR tests/linux/*.sh tests/macos/*.sh .github/scripts/*.sh
 
             - name: Check PowerShell syntax
               shell: pwsh
@@ -56,35 +56,35 @@ jobs:
                   }
 
     build-and-test:
-        name: ${{ matrix.toolchain.preset_prefix }}-${{ matrix.configuration }} / ${{ matrix.linkage.name }}
+        name: ${{ matrix.os }} / ${{ matrix.preset }} / ${{ matrix.shared && 'shared' || 'static' }}
         needs: lint
-        runs-on: ${{ matrix.toolchain.runner }}
+        runs-on: ${{ matrix.os }}
         timeout-minutes: 20
         strategy:
             fail-fast: false
-            max-parallel: 4
             matrix:
-                toolchain:
-                    - {runner: windows-2022, preset_prefix: win-msvc}
-                    - {runner: windows-2022, preset_prefix: win-clangcl}
-                    - {runner: ubuntu-24.04, preset_prefix: linux-gcc}
-                configuration: [dbg, rel]
-                linkage:
-                    - {name: static, shared: 'OFF'}
-                    - {name: shared, shared: 'ON'}
                 include:
-                    - toolchain: {runner: windows-2022, preset_prefix: win-msvc}
-                      configuration: sanitize
-                      linkage: {name: static, shared: 'OFF'}
-                    - toolchain: {runner: ubuntu-24.04, preset_prefix: linux-gcc}
-                      configuration: sanitize
-                      linkage: {name: static, shared: 'OFF'}
+                    - {os: windows-2025, preset: win-msvc-dbg, shared: false}
+                    - {os: windows-2025, preset: win-msvc-rel, shared: true}
+                    - {os: windows-2025, preset: win-msvc-sanitize, shared: false}
+                    - {os: windows-2025, preset: win-clangcl-dbg, shared: false}
+                    - {os: windows-2025, preset: win-clangcl-rel, shared: true}
+                    - {os: windows-2022, preset: win-msvc-dbg, shared: false}
+                    - {os: ubuntu-26.04, preset: linux-gcc-dbg, shared: false}
+                    - {os: ubuntu-26.04, preset: linux-gcc-rel, shared: true}
+                    - {os: ubuntu-26.04, preset: linux-clang-rel, shared: true}
+                    - {os: ubuntu-26.04, preset: linux-clang-sanitize, shared: false}
+                    - {os: ubuntu-24.04, preset: linux-gcc-dbg, shared: false}
+                    - {os: macos-26, preset: macos-dbg, shared: false}
+                    - {os: macos-26, preset: macos-rel, shared: true}
+                    - {os: macos-26, preset: macos-sanitize, shared: false}
+                    - {os: macos-15, preset: macos-dbg, shared: false}
         defaults:
             run:
                 shell: bash
         env:
-            PRESET: ${{ matrix.toolchain.preset_prefix }}-${{ matrix.configuration }}
-            BUILD_SHARED_LIBS: ${{ matrix.linkage.shared }}
+            PRESET: ${{ matrix.preset }}
+            BUILD_SHARED_LIBS: ${{ matrix.shared && 'ON' || 'OFF' }}
             CMAKE_BUILD_PARALLEL_LEVEL: 2
 
         steps:
@@ -100,7 +100,7 @@ jobs:
 
             - name: Set up Linux build and test environment
               if: runner.os == 'Linux'
-              run: bash .github/scripts/setup-linux.sh "build/$PRESET/tools"
+              run: bash .github/scripts/setup-linux.sh "$PRESET"
 
             - name: Configure
               run: cmake --preset "$PRESET" -DBUILD_SHARED_LIBS="$BUILD_SHARED_LIBS"
@@ -116,7 +116,7 @@ jobs:
               if: failure()
               uses: actions/upload-artifact@v7.0.1
               with:
-                  name: logs-${{ env.PRESET }}-${{ matrix.linkage.name }}
+                  name: logs-${{ matrix.os }}-${{ env.PRESET }}-${{ matrix.shared && 'shared' || 'static' }}
                   retention-days: 3
                   if-no-files-found: ignore
                   path: |
