@@ -18,6 +18,11 @@ jobs:
         name: Lint
         runs-on: ubuntu-26.04
         timeout-minutes: 10
+        permissions:
+            contents: read
+            pull-requests: read
+        outputs:
+            docs-only: ${{ steps.changes.outputs.non-markdown == 'false' }}
         defaults:
             run:
                 shell: bash
@@ -26,26 +31,45 @@ jobs:
               with:
                   persist-credentials: false
 
+            - name: Detect changes
+              id: changes
+              if: github.event_name != 'workflow_dispatch'
+              uses: dorny/paths-filter@v4.0.3
+              with:
+                  filters: |
+                      non-markdown:
+                          - '!**/*.md'
+
             - name: Check workflows
+              if: steps.changes.outputs.non-markdown != 'false'
               uses: raven-actions/actionlint@v2.2.0
               with:
                   version: '1.7.12'
                   pyflakes: false
 
             - name: Check C++ formatting
+              if: steps.changes.outputs.non-markdown != 'false'
               run: |
                   git ls-files -z '*.cpp' '*.h' |
                       xargs -0 clang-format-22 --dry-run --Werror
 
             - name: Check CMake formatting
+              if: steps.changes.outputs.non-markdown != 'false'
               run: |
                   git ls-files -z '*CMakeLists.txt' '*.cmake' '*.cmake.in' |
                       xargs -0 pipx run --spec cmakelang==0.6.13 cmake-format --check
 
+            - name: Check Markdown
+              run: |
+                  git ls-files -z '*.md' |
+                      xargs -0 npx --yes markdownlint-cli2@0.23.3
+
             - name: Check Bash scripts
+              if: steps.changes.outputs.non-markdown != 'false'
               run: shellcheck --external-sources --source-path=SCRIPTDIR tests/linux/*.sh tests/macos/*.sh .github/scripts/*.sh
 
             - name: Check PowerShell syntax
+              if: steps.changes.outputs.non-markdown != 'false'
               shell: pwsh
               run: |
                   Get-ChildItem tests -Recurse -Filter *.ps1 | ForEach-Object {
@@ -58,6 +82,7 @@ jobs:
     build-and-test:
         name: ${{ matrix.os }} / ${{ matrix.preset }} / ${{ matrix.shared && 'shared' || 'static' }}
         needs: lint
+        if: needs.lint.outputs.docs-only != 'true'
         runs-on: ${{ matrix.os }}
         timeout-minutes: 20
         strategy:
@@ -123,3 +148,21 @@ jobs:
                       build/${{ env.PRESET }}/cache/Testing/Temporary/*.log
                       build/${{ env.PRESET }}/cache/CMakeFiles/CMakeConfigureLog.yaml
                       build/${{ env.PRESET }}/native-tests/**/*.log
+
+    # Stable required check for both full and documentation-only runs.
+    required-checks:
+        name: Required checks
+        needs: [lint, build-and-test]
+        if: always()
+        runs-on: ubuntu-26.04
+        timeout-minutes: 5
+        steps:
+            - name: Check results
+              shell: bash
+              env:
+                  LINT_RESULT: ${{ needs.lint.result }}
+                  BUILD_RESULT: ${{ needs.build-and-test.result }}
+                  DOCS_ONLY: ${{ needs.lint.outputs.docs-only }}
+              run: |
+                  [[ "$LINT_RESULT" == success &&
+                     ("$BUILD_RESULT" == success || ("$DOCS_ONLY" == true && "$BUILD_RESULT" == skipped)) ]]
