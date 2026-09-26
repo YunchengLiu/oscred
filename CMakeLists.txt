@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(
     osvault
-    VERSION 0.1.0
+    VERSION 1.0.0
     LANGUAGES CXX
 )
 
@@ -27,14 +27,14 @@ endfunction()
 add_library(osvault)
 add_library(osvault::osvault ALIAS osvault)
 
-# Keep Debug installations distinct; 0.x releases share an ABI only within the same minor version
+# Keep Debug installations distinct; the major version identifies the shared-library ABI
 set_target_properties(
     osvault
     PROPERTIES CXX_VISIBILITY_PRESET hidden
                VISIBILITY_INLINES_HIDDEN YES
                DEBUG_POSTFIX d
                VERSION ${PROJECT_VERSION}
-               SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+               SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 include(GenerateExportHeader)
 generate_export_header(
@@ -106,7 +106,7 @@ configure_package_config_file(
 write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/osvault-config-version.cmake"
     VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMinorVersion
+    COMPATIBILITY SameMajorVersion
 )
 
 install(
