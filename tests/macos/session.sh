@@ -40,10 +40,16 @@ load_session() {
 }
 
 require_idle() {
-    local pid started
+    local pid started attempt
     if [[ -f $root/worker ]]; then
         { IFS= read -r pid; IFS= read -r started; } < "$root/worker"
         [[ $pid =~ ^[0-9]+$ && -n $started ]] || fail 'Invalid worker marker'
+        # A timeout can return while the worker is still exiting, especially under sanitizers
+        # Wait up to five seconds; a live worker still prevents access and cleanup
+        for ((attempt=0; attempt<50; ++attempt)); do
+            [[ $(process_start "$pid" || true) == "$started" ]] || return 0
+            sleep 0.1
+        done
         [[ $(process_start "$pid" || true) != "$started" ]] || fail 'A session worker is still alive'
     fi
 }
