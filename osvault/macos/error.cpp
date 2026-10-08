@@ -31,9 +31,9 @@ namespace osvault::detail {
             case errSecAuthFailed:
             case errSecInteractionNotAllowed:
             case errSecInteractionRequired: return std::make_error_code(std::errc::permission_denied);
-            case errSecItemNotFound:
+            case errSecItemNotFound: return std::make_error_code(std::errc::no_such_file_or_directory);
             case errSecNoSuchKeychain:
-            case errSecNoDefaultKeychain: return std::make_error_code(std::errc::no_such_file_or_directory);
+            case errSecNoDefaultKeychain: return std::make_error_code(std::errc::no_such_device);
             default: break;
         }
         // Error codes can outlive other static objects

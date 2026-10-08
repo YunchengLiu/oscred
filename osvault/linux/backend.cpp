@@ -78,6 +78,16 @@ namespace osvault::detail {
             object_ptr<SecretCollection> collection{nullptr, g_object_unref};
         };
 
+        // Service or collection lookup may report ENOENT before any entry is queried
+        // Map that failure to no_such_device so callers can distinguish missing storage from a missing key
+        // A missing default collection may also be reported without a GError
+        // Preserve the normal mapping for all other native errors
+        [[nodiscard]] std::error_code connection_error(GError const* const error) {
+            auto const code = error ? native_error(*error) : std::make_error_code(std::errc::no_such_device);
+            return code == std::errc::no_such_file_or_directory ? std::make_error_code(std::errc::no_such_device)
+                                                                : code;
+        }
+
         [[nodiscard]] std::expected<connection, std::error_code> connect() {
             // Only the prompt virtual functions differ; no additional instance or class storage is needed
             static auto const service_type = g_type_register_static_simple(
@@ -90,15 +100,13 @@ namespace osvault::detail {
                 secret_service_open_sync(service_type, nullptr, SECRET_SERVICE_NONE, nullptr, std::out_ptr(error))
             );
             if (!result.service) {
-                return std::unexpected{native_error(*error)};
+                return std::unexpected{connection_error(error.get())};
             }
             result.collection.reset(secret_collection_for_alias_sync(
                 result.service.get(), SECRET_COLLECTION_DEFAULT, SECRET_COLLECTION_NONE, nullptr, std::out_ptr(error)
             ));
             if (!result.collection) {
-                return std::unexpected{
-                    error ? native_error(*error) : std::make_error_code(std::errc::no_such_file_or_directory)
-                };
+                return std::unexpected{connection_error(error.get())};
             }
             // Locked collections may hide their items, so reject them before an empty search can imply success
             if (secret_collection_get_locked(result.collection.get()) != 0) {
