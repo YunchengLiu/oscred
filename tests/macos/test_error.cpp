@@ -7,8 +7,8 @@
 TEST_CASE("macos native error mapping" * doctest::test_suite("macos")) {
     CHECK_FALSE(osvault::detail::native_error(errSecSuccess));
     CHECK(osvault::detail::native_error(errSecItemNotFound) == std::errc::no_such_file_or_directory);
-    CHECK(osvault::detail::native_error(errSecNoDefaultKeychain) == std::errc::no_such_file_or_directory);
-    CHECK(osvault::detail::native_error(errSecNoSuchKeychain) == std::errc::no_such_file_or_directory);
+    CHECK(osvault::detail::native_error(errSecNoDefaultKeychain) == std::errc::no_such_device);
+    CHECK(osvault::detail::native_error(errSecNoSuchKeychain) == std::errc::no_such_device);
     CHECK(osvault::detail::native_error(errSecAuthFailed) == std::errc::permission_denied);
     CHECK(osvault::detail::native_error(errSecInteractionNotAllowed) == std::errc::permission_denied);
     CHECK(osvault::detail::native_error(errSecInteractionRequired) == std::errc::permission_denied);

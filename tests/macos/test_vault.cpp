@@ -204,7 +204,7 @@ namespace {
             throw std::runtime_error{"Failure scenario still has a default Keychain"};
         }
         osvault::vault storage{std::string{fixture_group}};
-        auto const     missing = std::make_error_code(std::errc::no_such_file_or_directory);
+        auto const     missing = std::make_error_code(std::errc::no_such_device);
         if (storage.try_read("key") != std::unexpected{missing} || storage.try_write("key", {}) != missing ||
             storage.try_erase("key") != std::unexpected{missing} ||
             storage.try_get_keys() != std::unexpected{missing} || storage.try_clear() != missing ||

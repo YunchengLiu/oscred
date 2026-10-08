@@ -30,6 +30,7 @@ namespace osvault {
     /// An operation that requires interaction reports an error
     /// Linux requires an existing, unlocked default Secret Service collection
     /// macOS uses the existing default file-based Keychain; access depends on its lock state and item ACLs
+    /// On Linux and macOS, a missing default collection or Keychain reports std::errc::no_such_device
     ///
     /// Moved-from objects have an empty name and reject storage operations with std::errc::invalid_argument
     /// The try_ operations report operation errors but may still throw on allocation failure
@@ -73,6 +74,8 @@ namespace osvault {
 
         /// @brief Read the value for a key
         ///
+        /// @details A missing key reports ERROR_NOT_FOUND in std::system_category() on Windows
+        /// On Linux and macOS, it reports std::errc::no_such_file_or_directory
         /// @exception std::system_error The key is absent or the operation fails
         [[nodiscard]] OSVAULT_EXPORT std::vector<std::byte> read(std::string_view key) const;
 

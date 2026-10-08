@@ -233,7 +233,7 @@ namespace {
         }
         auto const error = result.error();
         if ((kind == "locked" && error != std::errc::permission_denied) ||
-            (kind == "missing" && error != std::errc::no_such_file_or_directory) ||
+            (kind == "missing" && error != std::errc::no_such_device) ||
             (kind == "unavailable" && std::string_view{error.category().name()} != "g-dbus-error-quark")) {
             return 1;
         }
